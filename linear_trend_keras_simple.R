@@ -1,26 +1,26 @@
 source("common.R")
+source("functions.R")
 
 model_exists <- TRUE
 
-lstm_num_timesteps <- 5
+lstm_num_timesteps <- 1
 batch_size <- 1
 epochs <- 500
 lstm_units <- 4
+model_type <- "model_lstm_simple"
 lstm_type <- "stateless"
 data_type <- "data_raw"
 test_type <- "TREND"
 
-(model_name <- paste(test_type, "_model_lstm_simple", lstm_type, data_type, epochs, "epochs", sep="_"))
+(model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs))
 
 # get data into "timesteps form"
-X_train <- t(sapply(1:(length(trend_train) - lstm_num_timesteps), function(x) trend_train[x:(x + lstm_num_timesteps - 1)]))
-dim(X_train)
+X_train <- build_X(trend_train, lstm_num_timesteps) 
+y_train <- build_y(trend_train, lstm_num_timesteps) 
 
-y_train <- sapply((lstm_num_timesteps + 1):(length(trend_train)), function(x) trend_train[x])
-length(y_train)
+X_test <- build_X(trend_test, lstm_num_timesteps) 
+y_test <- build_y(trend_test, lstm_num_timesteps) 
 
-X_test <- t(sapply(1:(length(trend_test) - lstm_num_timesteps), function(x) trend_test[x:(x + lstm_num_timesteps - 1)]))
-y_test <- sapply((lstm_num_timesteps + 1):(length(trend_test)), function(x) trend_test[x])
 
 
 # Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)

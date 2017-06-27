@@ -1,10 +1,10 @@
 source("common.R")
 
-model_exists <- FALSE
+model_exists <- TRUE
 
 # since we are using stateful rnn tsteps can be set to 1
 lstm_num_timesteps <- 1
-batch_size <- 5
+batch_size <- 1
 epochs <- 500
 lstm_units <- 4
 lstm_type <- "stateful"
@@ -14,13 +14,28 @@ test_type <- "TREND"
 (model_name <- paste(test_type, "_model_lstm_simple", lstm_type, data_type, epochs, "epochs", sep="_"))
 
 # get data into "timesteps form"
-X_train <- t(sapply(1:(length(trend_train) - lstm_num_timesteps), function(x) trend_train[x:(x + lstm_num_timesteps - 1)]))
+# get data into "timesteps form"
+X_train <- if (lstm_num_timesteps > 1) {
+  t(sapply(1:(length(trend_train) - lstm_num_timesteps), function(x) trend_train[x:(x + lstm_num_timesteps - 1)]))
+} else {
+  trend_train[1:length(trend_train) - lstm_num_timesteps]
+}
+
+if (lstm_num_timesteps ==1) dim(X_train) <- c(length(X_train),1)
 dim(X_train)
 
 y_train <- sapply((lstm_num_timesteps + 1):(length(trend_train)), function(x) trend_train[x])
 length(y_train)
 
-X_test <- t(sapply(1:(length(trend_test) - lstm_num_timesteps), function(x) trend_test[x:(x + lstm_num_timesteps - 1)]))
+X_test <- if (lstm_num_timesteps > 1) {
+  t(sapply(1:(length(trend_test) - lstm_num_timesteps), function(x) trend_test[x:(x + lstm_num_timesteps - 1)]))
+} else {
+  trend_test[1:length(trend_test) - lstm_num_timesteps]
+}
+
+if (lstm_num_timesteps ==1) dim(X_test) <- c(length(X_test),1)
+dim(X_test)
+
 y_test <- sapply((lstm_num_timesteps + 1):(length(trend_test)), function(x) trend_test[x])
 
 
@@ -35,9 +50,6 @@ c(num_samples, num_steps, num_features)
 
 dim(X_test) <- c(dim(X_test)[1], dim(X_test)[2], 1)
 
-model %>% 
-  layer_lstm(units = lstm_units, batch_input_shape = c(batch_size, num_steps, num_features), stateful = TRUE)
-  
 # model
 if (!model_exists) {
   set.seed(22222)
@@ -65,7 +77,9 @@ if (!model_exists) {
   model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
 }
 
+model %>% reset_states()
 pred_train <- model %>% predict(X_train, batch_size = batch_size)
+model %>% reset_states()
 pred_test <- model %>% predict(X_test, batch_size = batch_size)
 
 df <- data_frame(time_id = 1:120,
@@ -78,9 +92,17 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
 # test on in-range test set
 trend_test <- trend_test_inrange
-X_test <- t(sapply(1:(length(trend_test) - lstm_num_timesteps), function(x) trend_test[x:(x + lstm_num_timesteps - 1)]))
+X_test <- if (lstm_num_timesteps > 1) {
+  t(sapply(1:(length(trend_test) - lstm_num_timesteps), function(x) trend_test[x:(x + lstm_num_timesteps - 1)]))
+} else {
+  trend_test[1:length(trend_test) - lstm_num_timesteps]
+}
+
+if (lstm_num_timesteps ==1) dim(X_test) <- c(length(X_test),1)
 dim(X_test) <- c(dim(X_test)[1], dim(X_test)[2], 1)
 y_test <- sapply((lstm_num_timesteps + 1):(length(trend_test)), function(x) trend_test[x])
+
+model %>% reset_states()
 pred_test <- model %>% predict(X_test, batch_size = batch_size)
 
 (test_rsme <- sqrt(sum((tail(trend_test,length(trend_test) - lstm_num_timesteps) - pred_test)^2)))
