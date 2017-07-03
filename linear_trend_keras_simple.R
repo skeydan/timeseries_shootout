@@ -3,7 +3,7 @@ source("functions.R")
 
 model_exists <- TRUE
 
-lstm_num_timesteps <- 1
+lstm_num_timesteps <- 5
 batch_size <- 1
 epochs <- 500
 lstm_units <- 4
@@ -12,7 +12,11 @@ lstm_type <- "stateless"
 data_type <- "data_raw"
 test_type <- "TREND"
 
-(model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs))
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+cat("\n####################################################################################")
+cat("\nRunning model: ", model_name)
+cat("\n####################################################################################")
 
 # get data into "timesteps form"
 X_train <- build_X(trend_train, lstm_num_timesteps) 
@@ -21,18 +25,13 @@ y_train <- build_y(trend_train, lstm_num_timesteps)
 X_test <- build_X(trend_test, lstm_num_timesteps) 
 y_test <- build_y(trend_test, lstm_num_timesteps) 
 
-
-
 # Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
-dim(X_train) <- c(dim(X_train)[1], dim(X_train)[2], 1)
-dim(X_train)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
 
 num_samples <- dim(X_train)[1]
 num_steps <- dim(X_train)[2]
 num_features <- dim(X_train)[3]
-c(num_samples, num_steps, num_features)
-
-dim(X_test) <- c(dim(X_test)[1], dim(X_test)[2], 1)
 
 # model
 if (!model_exists) {
@@ -56,6 +55,8 @@ if (!model_exists) {
   model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
 }
 
+# predict
+
 pred_train <- model %>% predict(X_train, batch_size = batch_size)
 pred_test <- model %>% predict(X_test, batch_size = batch_size)
 
@@ -66,16 +67,18 @@ df <- data_frame(time_id = 1:120,
                  pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps), pred_test))
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
+test_rsme <- sqrt(sum((tail(trend_test,length(trend_test) - lstm_num_timesteps) - pred_test)^2))
+cat("\n###########################################")
+cat("\nRSME on out-of-range test set: ", test_rsme)
+cat("\n###########################################")
 
 # test on in-range test set
 trend_test <- trend_test_inrange
-X_test <- t(sapply(1:(length(trend_test) - lstm_num_timesteps), function(x) trend_test[x:(x + lstm_num_timesteps - 1)]))
-dim(X_test) <- c(dim(X_test)[1], dim(X_test)[2], 1)
-y_test <- sapply((lstm_num_timesteps + 1):(length(trend_test)), function(x) trend_test[x])
+X_test <- build_X(trend_test, lstm_num_timesteps) 
+y_test <- build_y(trend_test, lstm_num_timesteps) 
+X_test <- reshape_X_3d(X_test)
+
 pred_test <- model %>% predict(X_test, batch_size = batch_size)
-
-(test_rsme <- sqrt(sum((tail(trend_test,length(trend_test) - lstm_num_timesteps) - pred_test)^2)))
-
 df <- data_frame(time_id = 1:120,
                  train = c(trend_train, rep(NA, length(trend_test))),
                  test = c(rep(NA, length(trend_train)), trend_test),
@@ -83,4 +86,11 @@ df <- data_frame(time_id = 1:120,
                  pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps), pred_test))
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
+
+test_rsme <- sqrt(sum((tail(trend_test,length(trend_test) - lstm_num_timesteps) - pred_test)^2))
+
+cat("\n###########################################")
+cat("\nRSME on in-range test set: ", test_rsme)
+cat("\n###########################################")
+
 

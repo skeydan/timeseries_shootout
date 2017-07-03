@@ -1,6 +1,7 @@
 source("common.R")
+source("functions.R")
 
-model_exists <- TRUE
+model_exists <- FALSE
 
 lstm_num_timesteps <- 7
 batch_size <- 1
@@ -9,27 +10,28 @@ lstm_units <- 4
 lstm_type <- "stateless"
 data_type <- "data_raw"
 test_type <- "SEASONAL"
+model_type <- "model_lstm_simple"
 
-(model_name <- paste(test_type, "_model_lstm_simple", lstm_type, data_type, epochs, "epochs", sep="_"))
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+cat("\n####################################################################################")
+cat("\nRunning model: ", model_name)
+cat("\n####################################################################################")
 
 # get data into "timesteps form"
-X_train <- t(sapply(1:(length(seasonal_train) - lstm_num_timesteps), function(x) seasonal_train[x:(x + lstm_num_timesteps - 1)]))
-dim(X_train)
-X_train[1:5, ]
-y_train <- sapply((lstm_num_timesteps + 1):(length(seasonal_train)), function(x) seasonal_train[x])
-y_train[1:5]
-X_test <- t(sapply(1:(length(seasonal_test) - lstm_num_timesteps), function(x) seasonal_test[x:(x + lstm_num_timesteps - 1)]))
-y_test <- sapply((lstm_num_timesteps + 1):(length(seasonal_test)), function(x) trend_test[x])
+X_train <- build_X(trend_train, lstm_num_timesteps) 
+y_train <- build_y(trend_train, lstm_num_timesteps) 
+
+X_test <- build_X(trend_test, lstm_num_timesteps) 
+y_test <- build_y(trend_test, lstm_num_timesteps) 
+
 # Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
-dim(X_train) <- c(dim(X_train)[1], dim(X_train)[2], 1)
-dim(X_train)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
 
 num_samples <- dim(X_train)[1]
 num_steps <- dim(X_train)[2]
 num_features <- dim(X_train)[3]
-c(num_samples, num_steps, num_features)
-
-dim(X_test) <- c(dim(X_test)[1], dim(X_test)[2], 1)
 
 # model
 if (!model_exists) {
