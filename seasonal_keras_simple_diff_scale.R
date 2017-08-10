@@ -1,4 +1,5 @@
 source("common.R")
+source("functions.R")
 
 model_exists <- TRUE
 
@@ -9,12 +10,13 @@ lstm_units <- 4
 lstm_type <- "stateless"
 data_type <- "data_diffed_scaled"
 test_type <- "SEASONAL"
+model_type <- "model_lstm_simple"
 
-(model_name <- paste(test_type, "_model_lstm_simple", lstm_type, data_type, epochs, "epochs", sep="_"))
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
 
-# get data into "timesteps form"
-seasonal_train_start <- seasonal_train[1]
-seasonal_test_start <- seasonal_test[1]
+cat("\n####################################################################################")
+cat("\nRunning model: ", model_name)
+cat("\n####################################################################################")
 
 seasonal_train_diff <- diff(seasonal_train)
 seasonal_test_diff <- diff(seasonal_test)
@@ -22,31 +24,23 @@ seasonal_test_diff <- diff(seasonal_test)
 minval <- min(seasonal_train_diff)
 maxval <- max(seasonal_train_diff)
 
-normalize <- function(vec, min, max) {
-  (vec-min) / (max-min)
-}
-denormalize <- function(vec,min,max) {
-  vec * (max - min) + min
-}
-
 seasonal_train_diff <- normalize(seasonal_train_diff, minval, maxval)
 seasonal_test_diff <- normalize(seasonal_test_diff, minval, maxval)
 
-X_train <- t(sapply(1:(length(seasonal_train_diff) - lstm_num_timesteps), function(x) seasonal_train_diff[x:(x + lstm_num_timesteps - 1)]))
-y_train <- sapply((lstm_num_timesteps + 1):(length(seasonal_train_diff)), function(x) seasonal_train_diff[x])
-X_test <- t(sapply(1:(length(seasonal_test_diff) - lstm_num_timesteps), function(x) seasonal_test_diff[x:(x + lstm_num_timesteps - 1)]))
-y_test <- sapply((lstm_num_timesteps + 1):(length(seasonal_test_diff)), function(x) seasonal_test_diff[x])
+X_train <- build_X(seasonal_train_diff, lstm_num_timesteps) 
+y_train <- build_y(seasonal_train_diff, lstm_num_timesteps) 
+
+X_test <- build_X(seasonal_test_diff, lstm_num_timesteps) 
+y_test <- build_y(seasonal_test_diff, lstm_num_timesteps) 
 
 # Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
-dim(X_train) <- c(dim(X_train)[1], dim(X_train)[2], 1)
-dim(X_train)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
 
 num_samples <- dim(X_train)[1]
 num_steps <- dim(X_train)[2]
 num_features <- dim(X_train)[3]
-c(num_samples, num_steps, num_features)
-
-dim(X_test) <- c(dim(X_test)[1], dim(X_test)[2], 1)
 
 # model
 if (!model_exists) {
@@ -87,4 +81,8 @@ df <- data_frame(time_id = 1:112,
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
-(test_rsme <- sqrt(sum((tail(seasonal_test,length(seasonal_test) - lstm_num_timesteps - 1) - pred_test_undiff)^2)))
+test_rsme <- sqrt(sum((tail(seasonal_test,length(seasonal_test) - lstm_num_timesteps -1) - pred_test_undiff)^2))
+cat("\n###########################################")
+cat("\nRSME on test set: ", test_rsme)
+cat("\n###########################################")
+

@@ -25,16 +25,8 @@ trend_test_diff <- diff(trend_test)
 minval <- min(trend_train_diff)
 maxval <- max(trend_train_diff)
 
-normalize <- function(vec, min, max) {
-  (vec-min) / (max-min)
-}
-denormalize <- function(vec,min,max) {
-  vec * (max - min) + min
-}
-
 trend_train_diff <- normalize(trend_train_diff, minval, maxval)
 trend_test_diff <- normalize(trend_test_diff, minval, maxval)
-
 
 X_train <- build_X(trend_train_diff, lstm_num_timesteps) 
 y_train <- build_y(trend_train_diff, lstm_num_timesteps) 

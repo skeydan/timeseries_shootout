@@ -1,7 +1,7 @@
 source("common.R")
 source("functions.R")
 
-model_exists <- TRUE
+model_exists <- FALSE
 
 # since we are using stateful rnn tsteps can be set to 1
 lstm_num_timesteps <- 1
@@ -10,7 +10,7 @@ epochs <- 500
 lstm_units <- 4
 model_type <- "model_lstm_simple"
 lstm_type <- "stateful"
-data_type <- "data_raw"
+data_type <- "data_diffed"
 test_type <- "TREND"
 
 model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
@@ -18,6 +18,13 @@ model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epoc
 cat("\n####################################################################################")
 cat("\nRunning model: ", model_name)
 cat("\n####################################################################################")
+
+# difference
+trend_train_start <- trend_train[1]
+trend_test_start <- trend_test[1]
+
+trend_train_diff <- diff(trend_train)
+trend_test_diff <- diff(trend_test)
 
 # get data into "timesteps form"
 X_train <- build_X(trend_train, lstm_num_timesteps) 
@@ -33,6 +40,7 @@ X_test <- reshape_X_3d(X_test)
 num_samples <- dim(X_train)[1]
 num_steps <- dim(X_train)[2]
 num_features <- dim(X_train)[3]
+
 
 # model
 if (!model_exists) {
@@ -66,11 +74,14 @@ pred_train <- model %>% predict(X_train, batch_size = batch_size)
 model %>% reset_states()
 pred_test <- model %>% predict(X_test, batch_size = batch_size)
 
+pred_train_undiff <- pred_train + trend_train[(lstm_num_timesteps+1):(length(trend_train)-1)]
+pred_test_undiff <- pred_test + trend_test[(lstm_num_timesteps+1):(length(trend_test)-1)]
+
 df <- data_frame(time_id = 1:120,
                  train = c(trend_train, rep(NA, length(trend_test))),
                  test = c(rep(NA, length(trend_train)), trend_test),
-                 pred_train = c(rep(NA, lstm_num_timesteps), pred_train, rep(NA, length(trend_test))),
-                 pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps), pred_test))
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(trend_test))),
+                 pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff))
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
@@ -81,18 +92,20 @@ cat("\n###########################################")
 
 # test on in-range test set
 trend_test <- trend_test_inrange
-X_test <- build_X(trend_test, lstm_num_timesteps) 
-y_test <- build_y(trend_test, lstm_num_timesteps) 
+trend_test_diff <- diff(trend_test)
+X_test <- build_X(trend_test_diff, lstm_num_timesteps) 
+y_test <- build_y(trend_test_diff, lstm_num_timesteps) 
 X_test <- reshape_X_3d(X_test)
 
 model %>% reset_states()
 pred_test <- model %>% predict(X_test, batch_size = batch_size)
+pred_test_undiff <- pred_test + trend_test[(lstm_num_timesteps+1):(length(trend_test)-1)]
 
 df <- data_frame(time_id = 1:120,
                  train = c(trend_train, rep(NA, length(trend_test))),
                  test = c(rep(NA, length(trend_train)), trend_test),
-                 pred_train = c(rep(NA, lstm_num_timesteps), pred_train, rep(NA, length(trend_test))),
-                 pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps), pred_test))
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(trend_test))),
+                 pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff))
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 

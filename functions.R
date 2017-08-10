@@ -3,6 +3,14 @@ build_model_name = function(model_type, test_type, lstm_type, data_type, epochs)
   paste(model_type, lstm_type, data_type, test_type, epochs, "epochs", sep="_")
 }
 
+#
+normalize <- function(vec, min, max) {
+  (vec-min) / (max-min)
+}
+denormalize <- function(vec,min,max) {
+  vec * (max - min) + min
+}
+
 # get data into "timesteps form": design matrix
 build_X <- function(tseries, lstm_num_timesteps) {
   X <- if (lstm_num_timesteps > 1) {
