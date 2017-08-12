@@ -11,6 +11,14 @@ denormalize <- function(vec,min,max) {
   vec * (max - min) + min
 }
 
+# get data into "timesteps form": single matrix, for later chop-up into X and Y parts
+build_matrix <- function(tseries, overall_timesteps) {
+  X <- t(sapply(1:(length(tseries) - overall_timesteps + 1), #!!!!!!!!!! +1
+             function(x) tseries[x:(x + overall_timesteps - 1)]))
+  cat("\nBuilt matrix with dimensions: ", dim(X))
+  return(X)
+}
+
 # get data into "timesteps form": design matrix
 build_X <- function(tseries, lstm_num_timesteps) {
   X <- if (lstm_num_timesteps > 1) {
