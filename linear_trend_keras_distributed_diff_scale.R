@@ -1,12 +1,12 @@
 source("common.R")
 source("functions.R")
 
-model_exists <- FALSE
+model_exists <- TRUE
 
 lstm_num_predictions <- 4
-lstm_num_timesteps <- 4 #one less
+lstm_num_timesteps <- 4 
 batch_size <- 1
-epochs <- 5
+epochs <- 500
 lstm_units <- 4
 model_type <- "model_lstm_time_distributed"
 lstm_type <- "stateless"
@@ -90,42 +90,49 @@ pred_test_undiff <- trend_test_add_matrix + pred_test[ , , 1]
 
 
 df <- data_frame(time_id = 1:20,
-                 test = trend_test,
-                 pred_test1 = c(rep(NA, lstm_num_timesteps+1), pred_test_undiff[1, ], rep(NA, 11)),
-                 pred_test2 = c(rep(NA, lstm_num_timesteps+1), rep(NA, 1), pred_test_undiff[2, ], rep(NA, 10))
-                 )
-                 
-df <- df %>% gather(key = 'type', value = 'value', test:pred_test2)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
+                 test = trend_test)
+for(i in seq_len(nrow(pred_test))) {
+  varname <- paste0("pred_test", i)
+  df <- mutate(df, !!varname := c(rep(NA, lstm_num_timesteps+1),
+                                  rep(NA, i-1),
+                                  pred_test_undiff[i, ],
+                                  rep(NA, 12-i)))
+}
+
+df <- df %>% gather(key = 'type', value = 'value', test:pred_test12)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type, linetype=type)) 
 
 
-
-
-
-
-
+#######################################################################################
 # test on in-range dataset
+
 trend_test <- trend_test_inrange
 trend_test_diff <- diff(trend_test)
 trend_test_diff <- normalize(trend_test_diff, minval, maxval)
 
-X_test <- build_X(trend_test_diff, lstm_num_timesteps) 
-y_test <- build_y(trend_test_diff, lstm_num_timesteps) 
+test_matrix <- build_matrix(trend_test_diff, lstm_num_timesteps + lstm_num_predictions) 
+
+X_test <- test_matrix[ ,1:4]
+y_test <- test_matrix[ ,5:8]
+
 X_test <- reshape_X_3d(X_test)
+y_test <- reshape_X_3d(y_test)
 
 pred_test <- model %>% predict(X_test, batch_size = 1)
 pred_test <- denormalize(pred_test, minval, maxval)
 
+trend_test_add <- trend_test[(lstm_num_timesteps+1):(length(trend_test)-1)]
+trend_test_add_matrix <- build_matrix(trend_test_add, lstm_num_predictions)
+pred_test_undiff <- trend_test_add_matrix + pred_test[ , , 1]
 
+df <- data_frame(time_id = 1:20,
+                 test = trend_test)
+for(i in seq_len(nrow(pred_test))) {
+  varname <- paste0("pred_test", i)
+  df <- mutate(df, !!varname := c(rep(NA, lstm_num_timesteps+1), rep(NA, i-1), pred_test_undiff[i, ], rep(NA, 12-i)))
+}
 
-pred_test_undiff <- pred_test + trend_test[(lstm_num_timesteps+1):(length(trend_test)-1)]
-
-df <- data_frame(time_id = 1:120,
-                 train = c(trend_train, rep(NA, length(trend_test))),
-                 test = c(rep(NA, length(trend_train)), trend_test),
-                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(trend_test))),
-                 pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff))
-df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
+df <- df %>% gather(key = 'type', value = 'value', test:pred_test12)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type, linetype=type)) 
 
 
