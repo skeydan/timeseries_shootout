@@ -1,12 +1,12 @@
 source("common.R")
 source("functions.R")
 
-model_exists <- FALSE
+model_exists <- TRUE
 
 lstm_num_predictions <- 6
 lstm_num_timesteps <- 6
 batch_size <- 1
-epochs <- 5
+epochs <- 500
 lstm_units <- 4
 lstm_type <- "stateless"
 data_type <- "data_diffed_scaled"
@@ -19,24 +19,24 @@ cat("\n#########################################################################
 cat("\nRunning model: ", model_name)
 cat("\n####################################################################################")
 
-trend_train_diff <- diff(trend_train)
-trend_test_diff <- diff(trend_test)
+seasonal_train_diff <- diff(seasonal_train)
+seasonal_test_diff <- diff(seasonal_test)
 
 # normalize
-minval <- min(trend_train_diff)
-maxval <- max(trend_train_diff)
+minval <- min(seasonal_train_diff)
+maxval <- max(seasonal_train_diff)
 
-trend_train_diff <- normalize(trend_train_diff, minval, maxval)
-trend_test_diff <- normalize(trend_test_diff, minval, maxval)
+seasonal_train_diff <- normalize(seasonal_train_diff, minval, maxval)
+seasonal_test_diff <- normalize(seasonal_test_diff, minval, maxval)
 
-train_matrix <- build_matrix(trend_train_diff, lstm_num_timesteps + lstm_num_predictions) 
-test_matrix <- build_matrix(trend_test_diff, lstm_num_timesteps + lstm_num_predictions) 
+seasonal_matrix_train <- build_matrix(seasonal_train_diff, lstm_num_timesteps + lstm_num_predictions) 
+seasonal_matrix_test <- build_matrix(seasonal_test_diff, lstm_num_timesteps + lstm_num_predictions) 
 
-X_train <- train_matrix[ ,1:6]
-y_train <- train_matrix[ ,7:12]
+X_train <- seasonal_matrix_train[ ,1:6]
+y_train <- seasonal_matrix_train[ ,7:12]
 
-X_test <- test_matrix[ ,1:6]
-y_test <- test_matrix[ ,7:12]
+X_test <- seasonal_matrix_test[ ,1:6]
+y_test <- seasonal_matrix_test[ ,7:12]
 
 # Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
 X_train <- reshape_X_3d(X_train)
@@ -81,7 +81,7 @@ pred_test <- denormalize(pred_test, minval, maxval)
 # undiff
 seasonal_train_add <- seasonal_train[(lstm_num_timesteps+1):(length(seasonal_train)-1)]
 seasonal_train_add_matrix <- build_matrix(seasonal_train_add, lstm_num_predictions)
-pred_train_undiff <- trend_train_add_matrix + pred_train[ , , 1]
+pred_train_undiff <- seasonal_train_add_matrix + pred_train[ , , 1]
 
 seasonal_test_add <- seasonal_test[(lstm_num_timesteps+1):(length(seasonal_test)-1)]
 seasonal_test_add_matrix <- build_matrix(seasonal_test_add, lstm_num_predictions)
@@ -95,9 +95,9 @@ for(i in seq_len(nrow(pred_test))) {
   df <- mutate(df, !!varname := c(rep(NA, lstm_num_timesteps+1),
                                   rep(NA, i-1),
                                   pred_test_undiff[i, ],
-                                  rep(NA, 12-i)))
+                                  rep(NA, 9-i)))
 }
 
-df <- df %>% gather(key = 'type', value = 'value', test:pred_test12)
+df <- df %>% gather(key = 'type', value = 'value', test:pred_test9)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type, linetype=type)) 
 
