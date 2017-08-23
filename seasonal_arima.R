@@ -1,25 +1,29 @@
 source("common.R")
+source("functions.R")
+
+cat("\n####################################################################################")
+cat("\nRunning model: ", "ARIMA_seasonal_1step")
+cat("\n####################################################################################")
 
 # fit 
 fit <- auto.arima(seasonal_train)
+fit
 
 # 1-step-ahead forecast
-# re-estimate the model as new data arrives, as per https://robjhyndman.com/hyndsight/rolling-forecasts/ 
-h <- 1
-n <- length(seasonal_test) - h + 1
-fit <- auto.arima(seasonal_train)
-order <- arimaorder(fit)
-refit <- Arima(seasonal_test, order=order[1:3], seasonal=order[4:6])
-predictions <- refit$fitted
-(test_rsme <- sqrt(sum((seasonal_test - predictions)^2))) 
+preds_list <- forecast_rolling(fit, 1, seasonal_train, seasonal_test)
 
 df <- data_frame(time_id = 1:112,
                  train = c(seasonal_train, rep(NA, length(seasonal_test))),
                  test = c(rep(NA, length(seasonal_train)), seasonal_test),
                  fitted = c(fit$fitted, rep(NA, length(seasonal_test))),
-                 preds = c(rep(NA, length(seasonal_train)), predictions))
+                 preds = c(rep(NA, length(seasonal_train)), preds_list$predictions),
+                 lower = c(rep(NA, length(seasonal_train)), preds_list$lower),
+                 upper = c(rep(NA, length(seasonal_train)), preds_list$upper))
 df <- df %>% gather(key = 'type', value = 'value', train:preds)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) 
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1)
 
-# n-step-ahead forecast
-# tbd! #######################################################
+
+test_rsme <- sqrt(sum((seasonal_test - preds_list$predictions)^2))
+cat("\n###########################################")
+cat("\nRSME on test set: ", test_rsme)
+cat("\n###########################################")

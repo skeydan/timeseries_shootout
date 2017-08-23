@@ -46,7 +46,7 @@ reshape_X_3d <- function(X) {
 # re-estimate the model as new data arrives, as per https://robjhyndman.com/hyndsight/rolling-forecasts/ 
 forecast_rolling <- function(fit, n_forecast, train, test) {
   
-  n <- length(trend_test) - n_forecast + 1
+  n <- length(test) - n_forecast + 1
   order <- arimaorder(fit)
   predictions <- matrix(0, nrow=n, ncol= n_forecast)
   lower <- matrix(0, nrow=n, ncol= n_forecast) 
@@ -55,9 +55,14 @@ forecast_rolling <- function(fit, n_forecast, train, test) {
   for(i in 1:n) {  
     x <- c(train[(i):length(train)], test[0:(i-1)])
     # re-estimate the model at each iteration
-    refit <- Arima(x, order=order[1:3], seasonal=order[4:6])
+    refit <- tryCatch({
+      Arima(x, order=order[1:3], seasonal=order[4:6])
     #  a variation on this also re-selects the model at each iteration
-    # refit <- auto.arima(x)
+    }, error = function(err) {
+      print(err)
+      print("Using auto.arima instead for this one")
+      auto.arima(x)
+    })
     predictions[i,] <- forecast(refit, h = n_forecast)$mean
     lower[i,] <- unclass(forecast(refit, h = n_forecast)$lower)[,2] # 95% prediction interval
     upper[i,] <- unclass(forecast(refit, h = n_forecast)$upper)[,2] # 95% prediction interval
