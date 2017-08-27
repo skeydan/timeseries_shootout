@@ -23,7 +23,7 @@ df <- df %>% gather(key = 'type', value = 'value', train:preds)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1)
 
 
-test_rsme <- sqrt(sum((seasonal_test - preds_list$predictions)^2))
+test_rmse <- rmse(seasonal_test, preds_list$predictions)
 cat("\n###########################################")
-cat("\nRSME on test set: ", test_rsme)
+cat("\nrmse on test set: ", test_rmse)
 cat("\n###########################################")

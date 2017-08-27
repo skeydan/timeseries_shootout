@@ -43,8 +43,12 @@ reshape_X_3d <- function(X) {
   return(X)
 }
 
-# re-estimate the model as new data arrives, as per https://robjhyndman.com/hyndsight/rolling-forecasts/ 
-forecast_rolling <- function(fit, n_forecast, train, test) {
+# multistep forecasts, as per https://robjhyndman.com/hyndsight/rolling-forecasts/ 
+# 2 variants:
+# - reestimate model as new data point comes in
+# - re-select complete model as new data point comes in 
+# we keep the complete training set (as would be realistic)
+forecast_rolling <- function(fit, n_forecast, train, test, fmode = "reestimate_only") {
   
   n <- length(test) - n_forecast + 1
   order <- arimaorder(fit)
@@ -53,16 +57,17 @@ forecast_rolling <- function(fit, n_forecast, train, test) {
   upper <- matrix(0, nrow=n, ncol= n_forecast)
   
   for(i in 1:n) {  
-    x <- c(train[(i):length(train)], test[0:(i-1)])
-    # re-estimate the model at each iteration
-    refit <- tryCatch({
-      Arima(x, order=order[1:3], seasonal=order[4:6])
-    #  a variation on this also re-selects the model at each iteration
-    }, error = function(err) {
-      print(err)
-      print("Using auto.arima instead for this one")
-      auto.arima(x)
-    })
+    x <- c(train, test[0:(i-1)])
+    if(fmode == "reestimate_only") {  # re-estimate parameters, given model 
+      # important: must also pass in the period because this information gets lost when converting ts to vectors in concatenation step above
+      if(!is.na(order[7])) {
+        refit <- Arima(x, order=order[1:3],  seasonal=list(order = order[4:6], period = order[7]))
+      } else {
+        refit <- Arima(x, order=order[1:3],  seasonal = order[4:6])
+      }
+    } else if (fmode == "recompute_model") { # re-select the whole model
+      refit <- auto.arima(x)
+    }
     predictions[i,] <- forecast(refit, h = n_forecast)$mean
     lower[i,] <- unclass(forecast(refit, h = n_forecast)$lower)[,2] # 95% prediction interval
     upper[i,] <- unclass(forecast(refit, h = n_forecast)$upper)[,2] # 95% prediction interval
@@ -70,3 +75,6 @@ forecast_rolling <- function(fit, n_forecast, train, test) {
   
   list(predictions = predictions, lower = lower, upper = upper)
 }
+
+rmse <- function(target, predicted) sqrt(mean((target - predicted)^2))
+
