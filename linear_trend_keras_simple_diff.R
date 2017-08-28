@@ -74,9 +74,9 @@ df <- data_frame(time_id = 1:120,
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
-test_rsme <- sqrt(sum((tail(trend_test,length(trend_test) - lstm_num_timesteps -1) - pred_test_undiff)^2))
+test_rmse <- rmse(tail(trend_test,length(trend_test) - lstm_num_timesteps - 1), pred_test_undiff)
 cat("\n###########################################")
-cat("\nRSME on out-of-range test set: ", test_rsme)
+cat("\nRMSE on out-of-range test set: ", test_rmse)
 cat("\n###########################################")
 
 # test on in-range dataset
@@ -97,8 +97,9 @@ df <- data_frame(time_id = 1:120,
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
-test_rsme <- sqrt(sum((tail(trend_test,length(trend_test) - lstm_num_timesteps -1) - pred_test_undiff)^2))
+test_rmse <- rmse(tail(trend_test,length(trend_test) - lstm_num_timesteps - 1), pred_test_undiff)
+
 cat("\n###########################################")
-cat("\nRSME on in-range test set: ", test_rsme)
+cat("\nRMSE on in-range test set: ", test_rmse)
 cat("\n###########################################")
 

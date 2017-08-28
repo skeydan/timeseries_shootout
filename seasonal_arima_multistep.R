@@ -26,5 +26,7 @@ for(i in seq_len(nrow(pred_test))) {
 df <- df %>% gather(key = 'type', value = 'value', -time_id)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) 
 
+test_matrix <- build_matrix(seasonal_test,6)
+(test_rmse <- rmse(test_matrix, preds_list$predictions))
 
 # skip in-range test set

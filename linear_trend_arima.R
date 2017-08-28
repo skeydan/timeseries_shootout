@@ -23,9 +23,9 @@ df <- df %>% gather(key = 'type', value = 'value', train:preds)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1)
 
 
-test_rsme <- sqrt(sum((trend_test - preds_list$predictions)^2))
+test_rmse <- rmse(trend_test, preds_list$predictions)
 cat("\n###########################################")
-cat("\nRSME on out-of-range test set: ", test_rsme)
+cat("\nRMSE on out-of-range test set: ", test_rmse)
 cat("\n###########################################")
 
 
@@ -47,7 +47,7 @@ df <- df %>% gather(key = 'type', value = 'value', train:preds)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) 
 
 
-test_rsme <- sqrt(sum((trend_test - predictions)^2))
+test_rmse <- rmse(trend_test, predictions)
 cat("\n###########################################")
-cat("\nRSME on in-range test set: ", test_rsme)
+cat("\nRMSE on in-range test set: ", test_rmse)
 cat("\n###########################################")

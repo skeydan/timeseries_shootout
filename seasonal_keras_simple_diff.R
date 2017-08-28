@@ -71,7 +71,8 @@ df <- data_frame(time_id = 1:112,
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
-test_rsme <- sqrt(sum((tail(seasonal_test,length(seasonal_test) - lstm_num_timesteps - 1) - pred_test_undiff)^2)) 
+test_rmse <- rmse(tail(seasonal_test,length(seasonal_test) - lstm_num_timesteps-1), pred_test_undiff)
+
 cat("\n###########################################")
-cat("\nRSME on test set: ", test_rsme)
+cat("\nRMSE on test set: ", test_rmse)
 cat("\n###########################################")
