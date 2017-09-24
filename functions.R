@@ -3,9 +3,15 @@ build_model_name = function(model_type, test_type, lstm_type, data_type, epochs)
   paste(model_type, lstm_type, data_type, test_type, epochs, "epochs", sep="_")
 }
 
-#
-normalize <- function(m){
-  (m - min(m))/(max(m)-min(m))
+#normalize <- function(m){
+#  (m - min(m))/(max(m)-min(m))
+#}
+
+normalize <- function(vec, min, max) {
+  (vec-min) / (max-min)
+}
+denormalize <- function(vec,min,max) {
+  vec * (max - min) + min
 }
 
 # get data into "timesteps form": single matrix, for later chop-up into X and Y parts

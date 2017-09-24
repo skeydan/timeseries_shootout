@@ -1,0 +1,237 @@
+<style>
+
+.reveal section img {
+  border: 0px;
+  box-shadow: 0 0 0 0;
+}
+.reveal table td {
+  border: 0px;
+}
+
+.reveal table {
+  border: 0px;
+}
+
+.reveal h1 {
+  font-size: 2em;
+}
+
+.reveal h3 {
+  font-size: 1.2em;
+}
+
+.reveal figcaption {
+  font-size: 0.4em;
+}
+
+.small-code pre code {
+  font-size: 1em;
+}
+
+.reveal .smalltext {
+  font-size: 0.75em;
+}
+
+</style>
+
+
+Time series shootout: ARIMA vs. LSTM
+========================================================
+author: Sigrid Keydana, Trivadis
+date: 2017/10/10
+autosize: true
+incremental:false
+width: 1400
+height: 900
+
+
+========================================================
+type:prompt
+
+&nbsp; 
+
+&nbsp; 
+
+<h1>
+Forecasting? That's running ARIMA, right?
+</h1>
+
+
+Running ARIMA can be as easy as...
+========================================================
+class:small-code
+
+&nbsp;
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=16, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE,
+                      cache = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(forecast)
+```
+
+```{r, echo=TRUE}
+data("AirPassengers")
+alldata <- AirPassengers
+train <- window(AirPassengers,end=1958.99)
+test <- window(AirPassengers, start = 1959)
+
+fit <- auto.arima(train)
+autoplot(forecast(fit,h=20))
+```
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+So why would we want to use anything else?
+========================================================
+
+&nbsp;
+
+- preconditions/restrictions (stationarity, constant error variance, no level shifts, linear relationships)
+- can model any non-linear function with neural networks 
+- esp. RNNs (Recurrent Neural Networks) look promising for sequential data, even when it's not about NLP
+
+Let's compare ARIMA and RNNs on a set of synthetic and real-world benchmarks.
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+Quick recap: ARIMA
+========================================================
+
+&nbsp;
+
+TBS
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+The contender: LSTM
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Questions?
+========================================================
+
+&nbsp;
+
+&nbsp;
+
+Thank you!!
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+
+

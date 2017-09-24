@@ -31,10 +31,3 @@ source("linear_trend_keras_distributed_diff_scale.R")
 source("seasonal_keras_distributed_diff_scale.R")
 
 
-
-# TBD
-# arima 4 all
-# for real, always use diff & scale
-#
-#
-
