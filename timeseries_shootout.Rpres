@@ -25,7 +25,7 @@
 }
 
 .small-code pre code {
-  font-size: 1em;
+  font-size: 0.9em;
 }
 
 .reveal .smalltext {
@@ -60,6 +60,7 @@ Forecasting? That's running ARIMA, right?
 Running ARIMA can be as easy as...
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
@@ -73,6 +74,11 @@ knitr::opts_chunk$set(fig.width=16, fig.height=8, fig.path='Figs/',
 library(ggplot2)
 library(dplyr)
 library(forecast)
+source("common.R")
+source("functions.R")
+
+bold_text_20 <- element_text(face = "bold", size = 20)
+
 ```
 
 ```{r, echo=TRUE}
@@ -124,35 +130,92 @@ The contender: LSTM
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+========================================================
+type:prompt
+
+&nbsp; 
+
+&nbsp; 
+
+<h1>
+Round 1: Linear trend (synthetic dataset 1)
+</h1>
+
+
+The data
 ========================================================
 
 &nbsp;
+
+```{r}
+df <- data_frame(time_id = 1:120,
+                 train = c(trend_train, rep(NA, length(trend_test))),
+                 test = c(rep(NA, length(trend_train)), trend_test))
+df <- df %>% gather(key = 'type', value = 'value', train:test)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type), size = 2)  
+
+```
+
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+The tasks
 ========================================================
+incremental:true
 
 &nbsp;
+
+- Scenario 1: One-step-ahead rolling forecast
+- Scenario 2: Multi-step-ahead rolling forecast (n=4)
+
+&nbsp;
+
+Let's get started!
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+One-step-ahead rolling forecast... ARIMA please!
 ========================================================
+class:small-code
+incremental:true
 
 &nbsp;
+
+```{r}
+fit <- auto.arima(trend_train)
+fit
+
+# 1-step-ahead forecast
+preds_list <- forecast_rolling(fit, 1, trend_train, trend_test)
+test_rmse <- rmse(trend_test, preds_list$predictions)
+
+df <- data_frame(time_id = 1:120,
+                 train = c(trend_train, rep(NA, length(trend_test))),
+                 test = c(rep(NA, length(trend_train)), trend_test),
+                 fitted = c(fit$fitted, rep(NA, length(trend_test))),
+                 preds = c(rep(NA, length(trend_train)), preds_list$predictions),
+                 lower = c(rep(NA, length(trend_train)), preds_list$lower),
+                 upper = c(rep(NA, length(trend_train)), preds_list$upper))
+df <- df %>% gather(key = 'type', value = 'value', train:preds)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(4,1,0): Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+```
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+Now, for the LSTM...
 ========================================================
 
 &nbsp;
 
+Let's just quickly look at the 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
