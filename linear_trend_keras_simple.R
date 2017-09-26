@@ -1,12 +1,12 @@
 source("common.R")
 source("functions.R")
 
-model_exists <- TRUE
+model_exists <- FALSE
 
 lstm_num_timesteps <- 5
 batch_size <- 1
 epochs <- 500
-lstm_units <- 4
+lstm_units <- 32
 model_type <- "model_lstm_simple"
 lstm_type <- "stateless"
 data_type <- "data_raw"
