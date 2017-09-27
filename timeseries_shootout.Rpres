@@ -40,7 +40,7 @@ Time series shootout: ARIMA vs. LSTM
 author: Sigrid Keydana, Trivadis
 date: 2017/10/10
 autosize: true
-incremental:false
+incremental:true
 width: 1400
 height: 900
 
@@ -60,7 +60,6 @@ Forecasting? That's running ARIMA, right?
 Running ARIMA can be as easy as...
 ========================================================
 class:small-code
-incremental:true
 
 &nbsp;
 
@@ -74,7 +73,7 @@ knitr::opts_chunk$set(fig.width=16, fig.height=8, fig.path='Figs/',
 library(ggplot2)
 library(dplyr)
 library(forecast)
-
+library(tidyr)
 bold_text_20 <- element_text(face = "bold", size = 20)
 
 ```
@@ -162,12 +161,11 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type), size = 2)
 
 The tasks
 ========================================================
-incremental:true
 
 &nbsp;
 
-- Scenario 1: One-step-ahead rolling forecast
-- Scenario 2: Multi-step-ahead rolling forecast (n=4)
+- Task 1: One-step-ahead rolling forecast
+- Task 2: Multi-step-ahead rolling forecast (n=4)
 
 &nbsp;
 
@@ -280,10 +278,8 @@ pred_test <- model %>% predict(X_test, batch_size = batch_size)
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-So? Results please
+OK! Results please
 ========================================================
-incremental:true
-
 &nbsp;
 
 
@@ -297,7 +293,7 @@ df <- data_frame(time_id = 1:120,
                  pred_train = c(rep(NA, lstm_num_timesteps), pred_train, rep(NA, length(trend_test))),
                  pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps), pred_test))
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 ```
 
@@ -307,12 +303,14 @@ OOPS...????
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
-Seems like LSTM does not like extrapolating 
+Seems like LSTM does not like extrapolating... 
 ========================================================
 
 &nbsp;
 
-... from the known range of the data. Because for an in-range test set, it works very well:
+... from the known range of the data. 
+
+Because for an in-range test set, it works very well:
 
 &nbsp;
 
@@ -334,7 +332,7 @@ df <- data_frame(time_id = 1:120,
                  pred_train = c(rep(NA, lstm_num_timesteps), pred_train, rep(NA, length(trend_test))),
                  pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps), pred_test))
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 
 
@@ -346,7 +344,6 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 ARIMA is allowed to work with differences...
 ========================================================
-incremental:true
 
 &nbsp;
 
@@ -427,7 +424,7 @@ test_rmse <- rmse(tail(trend_test,length(trend_test) - lstm_num_timesteps - 1), 
 ```
 
 ```{r}
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM, with differencing: RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM, with differencing: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 ```
 
 
@@ -442,53 +439,860 @@ We could try to get further improvement scaling the data
 
 (although in this case the differences are quite small and homogeneous already)
 
+```{r, results="hide"}
+source("common.R")
+source("functions.R")
+
+model_exists <- TRUE
+
+lstm_num_timesteps <- 4 #one less
+batch_size <- 1
+epochs <- 500
+lstm_units <- 32
+model_type <- "model_lstm_simple"
+lstm_type <- "stateless"
+data_type <- "data_diffed_scaled"
+test_type <- "TREND"
+
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+trend_train_diff <- diff(trend_train)
+trend_test_diff <- diff(trend_test)
+
+# normalize
+minval <- min(trend_train_diff)
+maxval <- max(trend_train_diff)
+
+trend_train_diff <- normalize(trend_train_diff, minval, maxval)
+trend_test_diff <- normalize(trend_test_diff, minval, maxval)
+
+X_train <- build_X(trend_train_diff, lstm_num_timesteps) 
+y_train <- build_y(trend_train_diff, lstm_num_timesteps) 
+
+X_test <- build_X(trend_test_diff, lstm_num_timesteps) 
+y_test <- build_y(trend_test_diff, lstm_num_timesteps) 
+
+# Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
+num_samples <- dim(X_train)[1]
+num_steps <- dim(X_train)[2]
+num_features <- dim(X_train)[3]
+
+# model
+if (!model_exists) {
+  set.seed(22222)
+  model <- keras_model_sequential() 
+  model %>% 
+    layer_lstm(units = lstm_units, input_shape = c(num_steps, num_features)) %>% 
+    layer_dense(units = 1) %>% 
+    compile(
+      loss = 'mean_squared_error',
+      optimizer = 'adam'
+    )
+  
+  model %>% summary()
+  
+  model %>% fit( 
+    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+  )
+  model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
+} else {
+  model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
+}
+
+pred_train <- model %>% predict(X_train, batch_size = 1)
+pred_test <- model %>% predict(X_test, batch_size = 1)
+
+pred_train <- denormalize(pred_train, minval, maxval)
+pred_test <- denormalize(pred_test, minval, maxval)
+
+pred_train_undiff <- pred_train + trend_train[(lstm_num_timesteps+1):(length(trend_train)-1)]
+pred_test_undiff <- pred_test + trend_test[(lstm_num_timesteps+1):(length(trend_test)-1)]
+
+df <- data_frame(time_id = 1:120,
+                 train = c(trend_train, rep(NA, length(trend_test))),
+                 test = c(rep(NA, length(trend_train)), trend_test),
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(trend_test))),
+                 pred_test = c(rep(NA, length(trend_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff))
+df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
+test_rmse <- rmse(tail(trend_test,length(trend_test) - lstm_num_timesteps - 1), pred_test_undiff)
+```
+
+```{r}
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM, with differencing and scaling: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+```
+
+&nbsp;
+
+Seems like this one goes to LSTM ;-)
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+Next up: Multi-step-ahead rolling forecast
+========================================================
+class:small-code
+
+&nbsp;
+
+Let's see ARIMA fist!
+
+```{r}
+source("common.R")
+source("functions.R")
+fit <- auto.arima(trend_train)
+fit
+
+# 4-step-ahead forecast
+preds_list <- forecast_rolling(fit, 4, trend_train, trend_test)
+pred_test <- drop(preds_list$predictions)
+
+df <- data_frame(time_id = 1:20,
+                 test = trend_test)
+for(i in seq_len(nrow(pred_test))) {
+  varname <- paste0("pred_test", i)
+  df <- mutate(df, !!varname := c(rep(NA, i-1),
+                                  pred_test[i, ],
+                                  rep(NA, 17-i)))
+}
+
+calc_multiple_rmse <- function(df) {
+  m <- as.matrix(df)
+  ground_truth <-m[ ,2]
+  pred_cols <- m[ , 8:19]
+  rowwise_squared_error_sums <- apply(pred_cols, 2, function(col) sum((col - ground_truth)^2, na.rm = TRUE))
+  sqrt(sum(rowwise_squared_error_sums)/length(rowwise_squared_error_sums))
+}
+
+multiple_rmse <- calc_multiple_rmse(df)
+
+df <- df %>% gather(key = 'type', value = 'value', -time_id)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) + ggtitle(paste0("4-step-ahead rolling forecast from ARIMA, with differencing and scaling: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+```
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+For LSTM, let's now directly use differenced and scaled data
+========================================================
+class:small-code
+
+&nbsp;
+
+```{r, results="hide"}
+source("common.R")
+source("functions.R")
+
+model_exists <- TRUE
+
+lstm_num_predictions <- 4
+lstm_num_timesteps <- 4 
+batch_size <- 1
+epochs <- 500
+lstm_units <- 32
+model_type <- "model_lstm_time_distributed"
+lstm_type <- "stateless"
+data_type <- "data_diffed_scaled"
+test_type <- "TREND"
+
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+trend_train_diff <- diff(trend_train)
+trend_test_diff <- diff(trend_test)
+
+# normalize
+minval <- min(trend_train_diff)
+maxval <- max(trend_train_diff)
+
+trend_train_diff <- normalize(trend_train_diff, minval, maxval)
+trend_test_diff <- normalize(trend_test_diff, minval, maxval)
+
+train_matrix <- build_matrix(trend_train_diff, lstm_num_timesteps + lstm_num_predictions) 
+test_matrix <- build_matrix(trend_test_diff, lstm_num_timesteps + lstm_num_predictions) 
+
+X_train <- train_matrix[ ,1:4]
+y_train <- train_matrix[ ,5:8]
+
+X_test <- test_matrix[ ,1:4]
+y_test <- test_matrix[ ,5:8]
+
+
+# Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
+num_samples <- dim(X_train)[1]
+num_steps <- dim(X_train)[2]
+num_features <- dim(X_train)[3]
+
+y_train <- reshape_X_3d(y_train)
+y_test <- reshape_X_3d(y_test)
+```
+
+We're using Keras' TimeDistributed layer to get multi-step forecasts.
+
+&nbsp;
+
+```{r, echo=TRUE}
+if (!model_exists) {
+  set.seed(22222)
+  model <- keras_model_sequential() 
+  model %>% 
+    layer_lstm(units = lstm_units, input_shape = c(num_steps, num_features),
+               return_sequences = TRUE) %>% 
+    time_distributed(layer_dense(units = 1)) %>% 
+    compile(
+      loss = 'mean_squared_error',
+      optimizer = 'adam'
+    )
+  model %>% fit( 
+    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+  )
+  model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
+} else {
+  model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
+}
+pred_train <- model %>% predict(X_train, batch_size = 1)
+pred_test <- model %>% predict(X_test, batch_size = 1)
+
+```
+
+
+Multi-step forecast from LSTM
+========================================================
+class:small-code
+
+&nbsp;
+
+```{r, results="hide"}
+pred_train <- denormalize(pred_train, minval, maxval)
+pred_test <- denormalize(pred_test, minval, maxval)
+
+# undiff
+trend_train_add <- trend_train[(lstm_num_timesteps+1):(length(trend_train)-1)]
+trend_train_add_matrix <- build_matrix(trend_train_add, lstm_num_predictions)
+pred_train_undiff <- trend_train_add_matrix + pred_train[ , , 1]
+
+trend_test_add <- trend_test[(lstm_num_timesteps+1):(length(trend_test)-1)]
+trend_test_add_matrix <- build_matrix(trend_test_add, lstm_num_predictions)
+pred_test_undiff <- trend_test_add_matrix + pred_test[ , , 1]
+
+
+df <- data_frame(time_id = 1:20,
+                 test = trend_test)
+for(i in seq_len(nrow(pred_test))) {
+  varname <- paste0("pred_test", i)
+  df <- mutate(df, !!varname := c(rep(NA, lstm_num_timesteps+1),
+                                  rep(NA, i-1),
+                                  pred_test_undiff[i, ],
+                                  rep(NA, 12-i)))
+}
+calc_multiple_rmse <- function(df) {
+  m <- as.matrix(df)
+  ground_truth <-m[ ,2]
+  pred_cols <- m[ , 3:14]
+  rowwise_squared_error_sums <- apply(pred_cols, 2, function(col) sum((col - ground_truth)^2, na.rm = TRUE))
+  sqrt(sum(rowwise_squared_error_sums)/length(rowwise_squared_error_sums))
+}
+
+multiple_rmse <- calc_multiple_rmse(df)
+
+df <- df %>% gather(key = 'type', value = 'value', test:pred_test12)
+
+```
+
+
+```{r}
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("4-step-ahead rolling forecast from 32-unit LSTM, with differencing and scaling: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+```
+
+
+So this one goes to ARIMA. But we haven't really done any hyperparameter tuning for LSTM.
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+========================================================
+type:prompt
+
+&nbsp; 
+
+&nbsp; 
+
+<h1>
+Round 2: Seasonal data (synthetic dataset 2)
+</h1>
+
+
+The data
 ========================================================
 
 &nbsp;
 
+```{r}
+df <- data_frame(time_id = 1:112,
+                 train = c(seasonal_train, rep(NA, length(seasonal_test))),
+                 test = c(rep(NA, length(seasonal_train)), seasonal_test))
+df <- df %>% gather(key = 'train_test', value = 'value', -time_id)
+ggplot(df, aes(x = time_id, y = value, color = train_test)) + geom_line()
+```
+
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+The tasks
+========================================================
+incremental:true
+
+&nbsp;
+
+As before:
+
+- Task 1: One-step-ahead rolling forecast
+- Task 2: Multi-step-ahead rolling forecast (n=4)
+
+&nbsp;
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+
+ARIMA for seasonal data, one-step-ahead forecast
+========================================================
+class:small-code
+incremental:true
+
+&nbsp;
+
+```{r}
+source("common.R")
+source("functions.R")
+
+fit <- auto.arima(seasonal_train)
+fit
+
+# 1-step-ahead forecast
+preds_list <- forecast_rolling(fit, 1, seasonal_train, seasonal_test)
+
+test_rmse <- rmse(seasonal_test, preds_list$predictions)
+
+df <- data_frame(time_id = 1:112,
+                 train = c(seasonal_train, rep(NA, length(seasonal_test))),
+                 test = c(rep(NA, length(seasonal_train)), seasonal_test),
+                 fitted = c(fit$fitted, rep(NA, length(seasonal_test))),
+                 preds = c(rep(NA, length(seasonal_train)), preds_list$predictions),
+                 lower = c(rep(NA, length(seasonal_train)), preds_list$lower),
+                 upper = c(rep(NA, length(seasonal_train)), preds_list$upper))
+df <- df %>% gather(key = 'type', value = 'value', train:preds)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(3,0,2): Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+```
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Seasonal data, one-step-ahead forecast: Enter: LSTM
 ========================================================
 
 &nbsp;
 
+```{r, results="hide"}
+source("common.R")
+source("functions.R")
+
+model_exists <- TRUE
+
+lstm_num_timesteps <- 6
+batch_size <- 1
+epochs <- 500
+lstm_units <- 32
+lstm_type <- "stateless"
+data_type <- "data_diffed_scaled"
+test_type <- "SEASONAL"
+model_type <- "model_lstm_simple"
+
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+seasonal_train_diff <- diff(seasonal_train)
+seasonal_test_diff <- diff(seasonal_test)
+
+minval <- min(seasonal_train_diff)
+maxval <- max(seasonal_train_diff)
+
+seasonal_train_diff <- normalize(seasonal_train_diff, minval, maxval)
+seasonal_test_diff <- normalize(seasonal_test_diff, minval, maxval)
+
+X_train <- build_X(seasonal_train_diff, lstm_num_timesteps) 
+y_train <- build_y(seasonal_train_diff, lstm_num_timesteps) 
+
+X_test <- build_X(seasonal_test_diff, lstm_num_timesteps) 
+y_test <- build_y(seasonal_test_diff, lstm_num_timesteps) 
+
+# Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
+
+num_samples <- dim(X_train)[1]
+num_steps <- dim(X_train)[2]
+num_features <- dim(X_train)[3]
+
+# model
+if (!model_exists) {
+  set.seed(22222)
+  model <- keras_model_sequential() 
+  model %>% 
+    layer_lstm(units = lstm_units, input_shape = c(num_steps, num_features)) %>% 
+    layer_dense(units = 1) %>% 
+    compile(
+      loss = 'mean_squared_error',
+      optimizer = 'adam'
+    )
+  
+  model %>% summary()
+  
+  model %>% fit( 
+    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+  )
+  model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
+} else {
+  model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
+}
+
+pred_train <- model %>% predict(X_train, batch_size = 1)
+pred_test <- model %>% predict(X_test, batch_size = 1)
+
+pred_train <- denormalize(pred_train, minval, maxval)
+pred_test <- denormalize(pred_test, minval, maxval)
+
+pred_train_undiff <- pred_train + seasonal_train[(lstm_num_timesteps+1):(length(seasonal_train)-1)]
+pred_test_undiff <- pred_test + seasonal_test[(lstm_num_timesteps+1):(length(seasonal_test)-1)]
+
+test_rmse <- rmse(tail(seasonal_test,length(seasonal_test) - lstm_num_timesteps-1), pred_test_undiff)
+```
+
+```{r}
+df <- data_frame(time_id = 1:112,
+                 train = c(seasonal_train, rep(NA, length(seasonal_test))),
+                 test = c(rep(NA, length(seasonal_train)), seasonal_test),
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(seasonal_test))),
+                 pred_test = c(rep(NA, length(seasonal_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff))
+df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+```
+
+
+So this one's for LSTM again.
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+
+ARIMA for seasonal data, multi-step-ahead forecast
+========================================================
+class:small-code
+
+&nbsp;
+
+```{r}
+source("common.R")
+fit <- auto.arima(seasonal_train)
+fit
+
+# 6-step-ahead forecast
+preds_list <- forecast_rolling(fit, 6, seasonal_train, seasonal_test)
+pred_test <- drop(preds_list$predictions)
+dim(pred_test)
+
+df <- data_frame(time_id = 1:21,
+                 test = seasonal_test)
+for(i in seq_len(nrow(pred_test))) {
+  varname <- paste0("pred_test", i)
+  df <- mutate(df, !!varname := c(rep(NA, i-1),
+                                  pred_test[i, ],
+                                  rep(NA, 16-i)))
+}
+
+calc_multiple_rmse <- function(df) {
+  m <- as.matrix(df)
+  ground_truth <-m[ ,2]
+  pred_cols <- m[ , 8:18]
+  rowwise_squared_error_sums <- apply(pred_cols, 2, function(col) sum((col - ground_truth)^2, na.rm = TRUE))
+  sqrt(sum(rowwise_squared_error_sums)/length(rowwise_squared_error_sums))
+}
+
+multiple_rmse <- calc_multiple_rmse(df)
+
+
+df <- df %>% gather(key = 'type', value = 'value', -time_id)
+
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) +
+ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(3,0,2): Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+```
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+
+
+Seasonal data, multi-step forecast: enter: LSTM
 ========================================================
 
 &nbsp;
 
+```{r, results="hide"}
+source("common.R")
+source("functions.R")
+
+model_exists <- TRUE
+
+lstm_num_predictions <- 6
+lstm_num_timesteps <- 6
+batch_size <- 1
+epochs <- 500
+lstm_units <- 32
+lstm_type <- "stateless"
+data_type <- "data_diffed_scaled"
+test_type <- "SEASONAL"
+model_type <- "model_lstm_time_distributed"
+
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+seasonal_train_diff <- diff(seasonal_train)
+seasonal_test_diff <- diff(seasonal_test)
+
+# normalize
+minval <- min(seasonal_train_diff)
+maxval <- max(seasonal_train_diff)
+
+seasonal_train_diff <- normalize(seasonal_train_diff, minval, maxval)
+seasonal_test_diff <- normalize(seasonal_test_diff, minval, maxval)
+
+seasonal_matrix_train <- build_matrix(seasonal_train_diff, lstm_num_timesteps + lstm_num_predictions) 
+seasonal_matrix_test <- build_matrix(seasonal_test_diff, lstm_num_timesteps + lstm_num_predictions) 
+
+X_train <- seasonal_matrix_train[ ,1:6]
+y_train <- seasonal_matrix_train[ ,7:12]
+
+X_test <- seasonal_matrix_test[ ,1:6]
+y_test <- seasonal_matrix_test[ ,7:12]
+
+# Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
+y_train <- reshape_X_3d(y_train)
+y_test <- reshape_X_3d(y_test)
+
+num_samples <- dim(X_train)[1]
+num_steps <- dim(X_train)[2]
+num_features <- dim(X_train)[3]
+
+# model
+if (!model_exists) {
+  set.seed(22222)
+  model <- keras_model_sequential() 
+  model %>% 
+    layer_lstm(units = lstm_units, input_shape = c(num_steps, num_features),
+               return_sequences = TRUE) %>% 
+    time_distributed(layer_dense(units = 1)) %>% 
+    compile(
+      loss = 'mean_squared_error',
+      optimizer = 'adam'
+    )
+  
+  model %>% summary()
+  
+  model %>% fit( 
+    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+  )
+  model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
+} else {
+  model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
+}
+
+pred_train <- model %>% predict(X_train, batch_size = 1)
+pred_test <- model %>% predict(X_test, batch_size = 1)
+
+pred_train <- denormalize(pred_train, minval, maxval)
+pred_test <- denormalize(pred_test, minval, maxval)
+
+# undiff
+seasonal_train_add <- seasonal_train[(lstm_num_timesteps+1):(length(seasonal_train)-1)]
+seasonal_train_add_matrix <- build_matrix(seasonal_train_add, lstm_num_predictions)
+pred_train_undiff <- seasonal_train_add_matrix + pred_train[ , , 1]
+
+seasonal_test_add <- seasonal_test[(lstm_num_timesteps+1):(length(seasonal_test)-1)]
+seasonal_test_add_matrix <- build_matrix(seasonal_test_add, lstm_num_predictions)
+pred_test_undiff <- seasonal_test_add_matrix + pred_test[ , , 1]
+
+
+df <- data_frame(time_id = 1:21,
+                 test = seasonal_test)
+for(i in seq_len(nrow(pred_test))) {
+  varname <- paste0("pred_test", i)
+  df <- mutate(df, !!varname := c(rep(NA, lstm_num_timesteps+1),
+                                  rep(NA, i-1),
+                                  pred_test_undiff[i, ],
+                                  rep(NA, 9-i)))
+}
+calc_multiple_rmse <- function(df) {
+  m <- as.matrix(df)
+  ground_truth <-m[ ,2]
+  pred_cols <- m[ , 3:11]
+  rowwise_squared_error_sums <- apply(pred_cols, 2, function(col) sum((col - ground_truth)^2, na.rm = TRUE))
+  sqrt(sum(rowwise_squared_error_sums)/length(rowwise_squared_error_sums))
+}
+
+multiple_rmse <- calc_multiple_rmse(df)
+df <- df %>% gather(key = 'type', value = 'value', test:pred_test9)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type, linetype=type)) +
+ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+
+```
+
+
+Pretty close! 
+
+And again, no hyperparameter tuning involved.
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+Intermediate result after synthetic datasets?
 ========================================================
 
 &nbsp;
 
+ARIMA leading with 2.5 : 1.5
+
+&nbsp;
+
+Time to look at some real data. First one will be a classic...
+
+&nbsp;
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Questions?
+
+
+========================================================
+type:prompt
+
+&nbsp; 
+
+&nbsp; 
+
+<h1>
+Round 3: AirPassengers 
+</h1>
+
+
+The "Iris of time series"
+========================================================
+class:smalltext
+
+&nbsp;
+
+```{r}
+data("AirPassengers")
+
+autoplot(AirPassengers) + ggtitle("Air Passengers dataset") +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+```
+
+Things to note:
+
+- we have a trend
+- we have seasonality
+- variance is increasing (heteroscedasticity)
+
+As this is such a well-known and often-used dataset I'd expect ARIMA to do very well.
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+The tasks
 ========================================================
 
 &nbsp;
 
+As usual:
+
+- Task 1: One-step-ahead rolling forecast
+- Task 2: Multi-step-ahead rolling forecast (n=4)
+
 &nbsp;
 
-Thank you!!
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
+ARIMA on AirPassengers: one-step-ahead rolling forecast
+========================================================
+class:small-code
+
+&nbsp;
+
+```{r}
+alldata <- AirPassengers
+
+airp_train <- window(AirPassengers,end=1958.99)
+airp_test <- window(AirPassengers, start = 1959)
+
+num_train <- length(airp_train)
+num_test <- length(airp_test)
+num_all <- num_train + num_test
+
+fit <- auto.arima(airp_train)
+fit
+preds_list <- forecast_rolling(fit, 1, airp_train, airp_test)
+
+test_rmse <- rmse(airp_test, preds_list$predictions)
+
+df <- data_frame(
+                time_id = 1:num_all,
+                 train = c(airp_train, rep(NA, length(airp_test))),
+                 test = c(rep(NA, length(airp_train)), airp_test),
+                 fitted = c(fit$fitted, rep(NA, length(airp_test))),
+                 preds = c(rep(NA, length(airp_train)), preds_list$predictions),
+                 lower = c(rep(NA, length(airp_train)), preds_list$lower),
+                 upper = c(rep(NA, length(airp_train)), preds_list$upper))
+df <- df %>% gather(key = 'type', value = 'value', train:preds)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) +
+ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(1,1,0)(0,1,0)[12]: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+```
 
 
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+LSTM on AirPassengers: one-step-ahead rolling forecast
+========================================================
+class:small-code
+
+&nbsp;
+
+```{r}
+airp_train <- window(AirPassengers,end=1958.99)
+airp_test <- window(AirPassengers, start = 1959)
+
+num_train <- length(airp_train)
+num_test <- length(airp_test)
+num_all <- num_train + num_test
+
+
+model_exists <- TRUE
+
+lstm_num_timesteps <- 12
+batch_size <- 1
+epochs <- 500
+lstm_units <- 32
+model_type <- "model_lstm_simple"
+lstm_type <- "stateless"
+data_type <- "data_diffed_scaled"
+test_type <- "AIRP"
+
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+cat("\n####################################################################################")
+cat("\nRunning model: ", model_name)
+cat("\n####################################################################################")
+
+train_diff <- diff(airp_train)[!is.na(diff(airp_train))]
+test_diff <- diff(airp_test)[!is.na(diff(airp_test))]
+
+# normalize
+minval <- min(train_diff)
+maxval <- max(train_diff)
+
+train_diff <- normalize(train_diff, minval, maxval)
+test_diff <- normalize(test_diff, minval, maxval)
+
+X_train <- build_X(train_diff, lstm_num_timesteps) 
+y_train <- build_y(train_diff, lstm_num_timesteps) 
+
+X_test <- build_X(test_diff, lstm_num_timesteps) 
+y_test <- build_y(test_diff, lstm_num_timesteps) 
+
+# Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
+num_samples <- dim(X_train)[1]
+num_steps <- dim(X_train)[2]
+num_features <- dim(X_train)[3]
+
+# model
+if (!model_exists) {
+  set.seed(22222)
+  model <- keras_model_sequential() 
+  model %>% 
+    layer_lstm(units = lstm_units, input_shape = c(num_steps, num_features)) %>% 
+    layer_dense(units = 1) %>% 
+    compile(
+      loss = 'mean_squared_error',
+      optimizer = 'adam'
+    )
+  
+  model %>% summary()
+  
+  model %>% fit( 
+    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+  )
+  model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
+} else {
+  model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
+}
+
+pred_train <- model %>% predict(X_train, batch_size = 1)
+pred_test <- model %>% predict(X_test, batch_size = 1)
+
+pred_train <- denormalize(pred_train, minval, maxval)
+pred_test <- denormalize(pred_test, minval, maxval)
+
+pred_train_undiff <- pred_train + airp_train[(lstm_num_timesteps+1):(length(airp_train)-1)]
+pred_test_undiff <- pred_test + airp_test[(lstm_num_timesteps+1):(length(airp_test)-1)]
+
+test_rmse <- rmse(tail(test,length(airp_test) - lstm_num_timesteps - 1), pred_test_undiff)
+
+df <- data_frame(
+                 time_id = 1:144,
+                 train = c(airp_train, rep(NA, length(airp_test))),
+                 test = c(rep(NA, length(airp_train)), airp_test),
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(airp_test))),
+                 pred_test = c(rep(NA, length(airp_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff)
+   )
+df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) +
+ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(1,1,0)(0,1,0)[12]: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+```
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+###############TBD#######################
+# lstm more units? or dropout? or regularization?
+# airpassengers multistep
+# internet traffic

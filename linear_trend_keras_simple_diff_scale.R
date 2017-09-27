@@ -6,7 +6,7 @@ model_exists <- TRUE
 lstm_num_timesteps <- 4 #one less
 batch_size <- 1
 epochs <- 500
-lstm_units <- 4
+lstm_units <- 32
 model_type <- "model_lstm_simple"
 lstm_type <- "stateless"
 data_type <- "data_diffed_scaled"

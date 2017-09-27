@@ -7,7 +7,7 @@ lstm_num_predictions <- 6
 lstm_num_timesteps <- 6
 batch_size <- 1
 epochs <- 500
-lstm_units <- 4
+lstm_units <- 32
 lstm_type <- "stateless"
 data_type <- "data_diffed_scaled"
 test_type <- "SEASONAL"

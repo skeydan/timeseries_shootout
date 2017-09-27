@@ -22,6 +22,15 @@ for(i in seq_len(nrow(pred_test))) {
                                   pred_test[i, ],
                                   rep(NA, 17-i)))
 }
+calc_multiple_rmse <- function(df) {
+  m <- as.matrix(df)
+  ground_truth <-m[ ,2]
+  pred_cols <- m[ , 8:19]
+  rowwise_squared_error_sums <- apply(pred_cols, 2, function(col) sum((col - ground_truth)^2, na.rm = TRUE))
+  sqrt(sum(rowwise_squared_error_sums)/length(rowwise_squared_error_sums))
+}
+
+multiple_rmse <- calc_multiple_rmse(df)
 
 df <- df %>% gather(key = 'type', value = 'value', -time_id)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) 

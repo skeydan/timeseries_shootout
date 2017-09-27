@@ -7,7 +7,7 @@ lstm_num_predictions <- 4
 lstm_num_timesteps <- 4 
 batch_size <- 1
 epochs <- 500
-lstm_units <- 4
+lstm_units <- 32
 model_type <- "model_lstm_time_distributed"
 lstm_type <- "stateless"
 data_type <- "data_diffed_scaled"
@@ -99,8 +99,20 @@ for(i in seq_len(nrow(pred_test))) {
                                   rep(NA, 12-i)))
 }
 
+calc_multiple_rmse <- function(df) {
+  m <- as.matrix(df)
+  ground_truth <-m[ ,2]
+  pred_cols <- m[ , 3:14]
+  rowwise_squared_error_sums <- apply(pred_cols, 2, function(col) sum((col - ground_truth)^2, na.rm = TRUE))
+  sqrt(sum(rowwise_squared_error_sums)/length(rowwise_squared_error_sums))
+}
+
+multiple_rmse <- calc_multiple_rmse(df)
+multiple_rmse
+
 df <- df %>% gather(key = 'type', value = 'value', test:pred_test12)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type, linetype=type)) 
+
 
 
 #######################################################################################
