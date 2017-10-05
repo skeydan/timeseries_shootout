@@ -3,29 +3,23 @@ library(dplyr)
 library(tidyr)
 
 source("functions.R")
-data("AirPassengers")
 
-autoplot(AirPassengers)
+traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
+ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Internet traffic")
 
-alldata <- AirPassengers
-airp_train <- window(AirPassengers,end=1958.99)
-airp_test <- window(AirPassengers, start = 1959)
+internet_train <- traffic_df$bits[1:800]
+internet_test <- traffic_df$bits[801:nrow(traffic_df)]
 
-num_train <- length(airp_train)
-num_test <- length(airp_test)
-num_all <- num_train + num_test
+model_exists <- FALSE
 
-
-model_exists <- TRUE
-
-lstm_num_timesteps <- 12
+lstm_num_timesteps <- 7*24
 batch_size <- 1
 epochs <- 500
-lstm_units <- 128
-model_type <- "model_lstm_simple_128"
+lstm_units <- 32
+model_type <- "model_lstm_simple"
 lstm_type <- "stateless"
 data_type <- "data_diffed_scaled"
-test_type <- "AIRP"
+test_type <- "INTERNET"
 
 model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
 
@@ -33,8 +27,8 @@ cat("\n#########################################################################
 cat("\nRunning model: ", model_name)
 cat("\n####################################################################################")
 
-train_diff <- diff(airp_train)[!is.na(diff(airp_train))]
-test_diff <- diff(airp_test)[!is.na(diff(airp_test))]
+train_diff <- diff(internet_train)[!is.na(diff(internet_train))]
+test_diff <- diff(internet_test)[!is.na(diff(internet_test))]
 
 # normalize
 minval <- min(train_diff)
@@ -85,17 +79,17 @@ pred_test <- model %>% predict(X_test, batch_size = 1)
 pred_train <- denormalize(pred_train, minval, maxval)
 pred_test <- denormalize(pred_test, minval, maxval)
 
-pred_train_undiff <- pred_train + airp_train[(lstm_num_timesteps+1):(length(airp_train)-1)]
-pred_test_undiff <- pred_test + airp_test[(lstm_num_timesteps+1):(length(airp_test)-1)]
+pred_train_undiff <- pred_train + internet_train[(lstm_num_timesteps+1):(length(internet_train)-1)]
+pred_test_undiff <- pred_test + internet_test[(lstm_num_timesteps+1):(length(internet_test)-1)]
 
 df <- data_frame(
                  time_id = 1:144,
-                 train = c(airp_train, rep(NA, length(airp_test))),
-                 test = c(rep(NA, length(airp_train)), airp_test),
-                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(airp_test))),
-                 pred_test = c(rep(NA, length(airp_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff)
+                 train = c(internet_train, rep(NA, length(internet_test))),
+                 test = c(rep(NA, length(internet_train)), internet_test),
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(internet_test))),
+                 pred_test = c(rep(NA, length(internet_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff)
    )
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
-(test_rmse <- rmse(tail(airp_test,length(airp_test) - lstm_num_timesteps - 1), pred_test_undiff))
+(test_rmse <- rmse(tail(test,length(internet_test) - lstm_num_timesteps - 1), pred_test_undiff))

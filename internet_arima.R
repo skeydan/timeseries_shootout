@@ -1,45 +1,15 @@
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(fpp)
 library(forecast)
 
 source("functions.R")
-data("AirPassengers")
 
-autoplot(AirPassengers)
+traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
+ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Internet traffic")
 
-alldata <- AirPassengers
-train <- window(AirPassengers,end=1958.99)
-test <- window(AirPassengers, start = 1959)
-
-num_train <- length(train)
-num_test <- length(test)
-num_all <- num_train + num_test
-
-
-####################################################################################
-# ARIMA several steps from end of training data, no confints
-####################################################################################
-
-fit <- auto.arima(train)
-autoplot(forecast(fit,h=20))
-
-####################################################################################
-# ARIMA 1-step forecasts, no confints
-####################################################################################
-# fit$fitted are just 1-step ahead forecasts (see https://robjhyndman.com/hyndsight/rolling-forecasts/)
-# ?fitted.Arima: Returns h-step forecasts for the data used in fitting the model.
-# attention: this has now been fitted ON THE WHOLE TRAIN- AND TEST SET, not incrementally!!!
-# -> can't use this for comparisons
-
-fit <- auto.arima(train)
-fit
-refit <- Arima(alldata, model=fit)
-fc1step <- window(fitted(refit), start=1959)
-fc1step
-
-(test_rmse <- rmse(test, fc1step))
+train <- traffic_df$bits[1:800]
+test <- traffic_df$bits[801:nrow(traffic_df)]
 
 
 ####################################################################################

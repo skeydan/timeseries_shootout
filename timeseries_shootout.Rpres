@@ -38,9 +38,9 @@
 Time series shootout: ARIMA vs. LSTM
 ========================================================
 author: Sigrid Keydana, Trivadis
-date: 2017/10/10
+date: 2017/07/10
 autosize: true
-incremental:true
+incremental:false
 width: 1400
 height: 900
 
@@ -60,6 +60,7 @@ Forecasting? That's running ARIMA, right?
 Running ARIMA can be as easy as...
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
@@ -75,7 +76,7 @@ library(dplyr)
 library(forecast)
 library(tidyr)
 bold_text_20 <- element_text(face = "bold", size = 20)
-
+bold_text_16 <- element_text(face = "bold", size = 16)
 ```
 
 ```{r, echo=TRUE}
@@ -113,7 +114,17 @@ Quick recap: ARIMA
 
 &nbsp;
 
-TBS
+- autoregressive part: _AR(p)_:  
+
+$y_{t} = c + \phi_{1}y_{t-1} + \phi_{2}y_{t-2} + \dots + \phi_{p}y_{t-p} + e_{t}$
+
+- differencing: _I(d)_:  number of times differencing has to be applied to obtain a stationary series
+
+- moving average part: _MA(q)_:  
+
+$y_{t} = c + e_t + \theta_{1}e_{t-1} + \theta_{2}e_{t-2} + \dots + \theta_{q}e_{t-q}$
+
+&nbsp;
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
@@ -124,8 +135,62 @@ The contender: LSTM
 
 &nbsp;
 
+Googling the perfect LSTM picture... ;-)
+
+<figure>
+<img src="so_many_lstms.png">
+<figcaption>
+</figcaption>
+</figure>
+
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+Why LSTM? Or: Why Gated Recurrent Units, and not plain RNNs?
+========================================================
+
+&nbsp;
+
+- How can we preserve relevant information over many timesteps (_vanishing gradient_)?
+- how can we not get distracted by all that recent stuff?
+
+&nbsp;
+
+<table>
+<tr>
+<td><img src="gru1.png"/></td><td><img src="gru2.png" /></td>
+</tr>
+<tr>
+<td style="font-size: 0.7em;">Source: Stanford CS224n, lecture 11<br />http://web.stanford.edu/class/cs224n/lectures/cs224n-2017-lecture11.pdf</td><td></td>
+</tr>
+</table>
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+Just a little bit more complicated: LSTMs
+========================================================
+
+&nbsp;
+
+LSTMs add a further gate and redefine how state is transported, but are similar in effect:
+
+<figure>
+<img src="grus.png">
+<figcaption>
+</figcaption>
+</figure>
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+
 
 
 ========================================================
@@ -146,6 +211,7 @@ The data
 &nbsp;
 
 ```{r}
+source("common.R")
 df <- data_frame(time_id = 1:120,
                  train = c(trend_train, rep(NA, length(trend_test))),
                  test = c(rep(NA, length(trend_train)), trend_test))
@@ -209,6 +275,7 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ri
 Now, for the LSTM...
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
@@ -280,6 +347,8 @@ pred_test <- model %>% predict(X_test, batch_size = batch_size)
 
 OK! Results please
 ========================================================
+incremental:true
+
 &nbsp;
 
 
@@ -303,12 +372,13 @@ OOPS...????
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
-Seems like LSTM does not like extrapolating... 
+Seems like LSTM does not like extrapolating 
 ========================================================
+incremental:true
 
 &nbsp;
 
-... from the known range of the data. 
+(from the known range of the data)
 
 Because for an in-range test set, it works very well:
 
@@ -344,13 +414,16 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 ARIMA is allowed to work with differences...
 ========================================================
+incremental:true
 
 &nbsp;
 
-... wouldn't it be fair to allow LSTM to do so, too?
+... shouldn't LSTM be, too?
 (It would also eliminate our out-of-range problem.)
 
 We're using 4 instead of 5 timesteps now.
+
+Result:
 
 ```{r, results="hide"}
 source("common.R")
@@ -432,12 +505,15 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-We could try to get further improvement scaling the data
+We could try to get further improvement by scaling the data
 ========================================================
+incremental:true
 
 &nbsp;
 
 (although in this case the differences are quite small and homogeneous already)
+
+Result:
 
 ```{r, results="hide"}
 source("common.R")
@@ -521,12 +597,10 @@ test_rmse <- rmse(tail(trend_test,length(trend_test) - lstm_num_timesteps - 1), 
 ```
 
 ```{r}
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM, with differencing and scaling: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM, with differencing and scaling: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_16, axis.title = bold_text_20, axis.text = bold_text_20)
 ```
 
-&nbsp;
-
-Seems like this one goes to LSTM ;-)
+Quite an improvement! Seems like this one goes to LSTM ;-)
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
@@ -534,6 +608,7 @@ Seems like this one goes to LSTM ;-)
 
 Next up: Multi-step-ahead rolling forecast
 ========================================================
+incremental:true
 class:small-code
 
 &nbsp;
@@ -570,7 +645,7 @@ calc_multiple_rmse <- function(df) {
 multiple_rmse <- calc_multiple_rmse(df)
 
 df <- df %>% gather(key = 'type', value = 'value', -time_id)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) + ggtitle(paste0("4-step-ahead rolling forecast from ARIMA, with differencing and scaling: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) + ggtitle(paste0("4-step-ahead rolling forecast from ARIMA: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 ```
 
@@ -667,6 +742,7 @@ pred_test <- model %>% predict(X_test, batch_size = 1)
 Multi-step forecast from LSTM
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
@@ -709,7 +785,7 @@ df <- df %>% gather(key = 'type', value = 'value', test:pred_test12)
 
 
 ```{r}
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("4-step-ahead rolling forecast from 32-unit LSTM, with differencing and scaling: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle(paste0("4-step-ahead rolling forecast from 32-unit LSTM, with differencing and scaling: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_16, axis.title = bold_text_20, axis.text = bold_text_20)
 ```
 
 
@@ -758,7 +834,7 @@ incremental:true
 As before:
 
 - Task 1: One-step-ahead rolling forecast
-- Task 2: Multi-step-ahead rolling forecast (n=4)
+- Task 2: Multi-step-ahead rolling forecast (n=6 this time)
 
 &nbsp;
 
@@ -795,7 +871,7 @@ df <- data_frame(time_id = 1:112,
                  lower = c(rep(NA, length(seasonal_train)), preds_list$lower),
                  upper = c(rep(NA, length(seasonal_train)), preds_list$upper))
 df <- df %>% gather(key = 'type', value = 'value', train:preds)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(3,0,2): Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + ggtitle(paste0("One-step-ahead rolling forecast from ARIMA: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 ```
 
 
@@ -804,6 +880,7 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ri
 
 Seasonal data, one-step-ahead forecast: Enter: LSTM
 ========================================================
+incremental:true
 
 &nbsp;
 
@@ -903,6 +980,7 @@ So this one's for LSTM again.
 ARIMA for seasonal data, multi-step-ahead forecast
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
@@ -939,7 +1017,7 @@ multiple_rmse <- calc_multiple_rmse(df)
 df <- df %>% gather(key = 'type', value = 'value', -time_id)
 
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) +
-ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(3,0,2): Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggtitle(paste0("6-step-ahead rolling forecast from ARIMA: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 ```
 
 
@@ -951,8 +1029,11 @@ ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(3,0,2): Test RMSE = "
 
 Seasonal data, multi-step forecast: enter: LSTM
 ========================================================
+incremental:true
 
 &nbsp;
+
+Let's see:
 
 ```{r, results="hide"}
 source("common.R")
@@ -1060,7 +1141,7 @@ calc_multiple_rmse <- function(df) {
 multiple_rmse <- calc_multiple_rmse(df)
 df <- df %>% gather(key = 'type', value = 'value', test:pred_test9)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type, linetype=type)) +
-ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggtitle(paste0("6-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(multiple_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 
 ```
@@ -1075,6 +1156,7 @@ And again, no hyperparameter tuning involved.
 
 Intermediate result after synthetic datasets?
 ========================================================
+incremental:true
 
 &nbsp;
 
@@ -1082,13 +1164,14 @@ ARIMA leading with 2.5 : 1.5
 
 &nbsp;
 
-Time to look at some real data. First one will be a classic...
+Time to look at some real data. 
+
+We will now zoom in on one-step-ahead forecasts only, and we will choose two very different datasets: one a classic we are sure ARIMA will handle flawlessly, and one ... well, let's see!
 
 &nbsp;
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 
 
 ========================================================
@@ -1106,6 +1189,7 @@ Round 3: AirPassengers
 The "Iris of time series"
 ========================================================
 class:smalltext
+incremental:true
 
 &nbsp;
 
@@ -1121,22 +1205,16 @@ Things to note:
 - we have seasonality
 - variance is increasing (heteroscedasticity)
 
-As this is such a well-known and often-used dataset I'd expect ARIMA to do very well.
-
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
-The tasks
+The task
 ========================================================
 
 &nbsp;
 
-As usual:
-
-- Task 1: One-step-ahead rolling forecast
-- Task 2: Multi-step-ahead rolling forecast (n=4)
-
+Just one: One-step-ahead rolling forecast
 &nbsp;
 
 
@@ -1144,9 +1222,10 @@ As usual:
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
-ARIMA on AirPassengers: one-step-ahead rolling forecast
+AirPassengers, enter: ARIMA
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
@@ -1176,7 +1255,7 @@ df <- data_frame(
                  upper = c(rep(NA, length(airp_train)), preds_list$upper))
 df <- df %>% gather(key = 'type', value = 'value', train:preds)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) +
-ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(1,1,0)(0,1,0)[12]: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggtitle(paste0("One-step-ahead rolling forecast from ARIMA: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 ```
 
@@ -1185,13 +1264,18 @@ ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(1,1,0)(0,1,0)[12]: Te
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
-LSTM on AirPassengers: one-step-ahead rolling forecast
+AirPassengers, enter: LSTM
 ========================================================
 class:small-code
+incremental:true
 
 &nbsp;
 
-```{r}
+With this small dataset, we are pretty restricted regarding the number of timesteps used.
+We're using 12 here:
+
+
+```{r, results="hide"}
 airp_train <- window(AirPassengers,end=1958.99)
 airp_test <- window(AirPassengers, start = 1959)
 
@@ -1272,7 +1356,7 @@ pred_test <- denormalize(pred_test, minval, maxval)
 pred_train_undiff <- pred_train + airp_train[(lstm_num_timesteps+1):(length(airp_train)-1)]
 pred_test_undiff <- pred_test + airp_test[(lstm_num_timesteps+1):(length(airp_test)-1)]
 
-test_rmse <- rmse(tail(test,length(airp_test) - lstm_num_timesteps - 1), pred_test_undiff)
+test_rmse <- rmse(tail(airp_test,length(airp_test) - lstm_num_timesteps - 1), pred_test_undiff)
 
 df <- data_frame(
                  time_id = 1:144,
@@ -1283,7 +1367,7 @@ df <- data_frame(
    )
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) +
-ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(1,1,0)(0,1,0)[12]: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 ```
 
@@ -1292,7 +1376,52 @@ ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(1,1,0)(0,1,0)[12]: Te
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
-###############TBD#######################
-# lstm more units? or dropout? or regularization?
-# airpassengers multistep
-# internet traffic
+Intermediate result, before final round... Drumroll...
+========================================================
+class:small-code
+incremental:true
+
+&nbsp;
+
+... ARIMA leading with 3.5 : 1.5.
+
+Wait - is this really fair? No experimenting with hyperparameters, and not even with the number of hidden units?
+
+For sure it's not - for example, with 128 hidden units instead of 32, we're already down to RMSE = 19.5.
+
+But let's accept the current standings and look at the final dataset...
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+========================================================
+type:prompt
+
+&nbsp; 
+
+&nbsp; 
+
+<h1>
+Round 4: Internet traffic data
+</h1>
+
+Intermediate result, before final round... Drumroll...
+========================================================
+
+&nbsp;
+
+As per the description... 
+
+"Internet traffic data (in bits) from a private ISP with centres in 11 European cities. The data corresponds to a transatlantic link and was collecteInternet traffic data (in bits) from a private ISP with centres in 11 European cities. The data corresponds to a transatlantic link and was collected from 06:57 hours on 7 June to 11:17 hours on 31 July 2005. Hourly data."d from 06:57 hours on 7 June to 11:17 hours on 31 July 2005. Hourly data."
+
+```{r,fig.width=20,fig.height=10}
+traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
+ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Air Passengers dataset") +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+```
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+
