@@ -62,6 +62,10 @@ Running ARIMA can be as easy as...
 class:small-code
 incremental:true
 
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
 &nbsp;
 
 ```{r global_options, include=FALSE}
@@ -90,8 +94,6 @@ autoplot(forecast(fit,h=20))
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
 So why would we want to use anything else?
@@ -246,9 +248,13 @@ One-step-ahead rolling forecast... ARIMA please!
 class:small-code
 incremental:true
 
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 &nbsp;
 
 ```{r}
+source("functions.R")
 fit <- auto.arima(trend_train)
 fit
 
@@ -264,18 +270,20 @@ df <- data_frame(time_id = 1:120,
                  lower = c(rep(NA, length(trend_train)), preds_list$lower),
                  upper = c(rep(NA, length(trend_train)), preds_list$upper))
 df <- df %>% gather(key = 'type', value = 'value', train:preds)
-ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + ggtitle(paste0("One-step-ahead rolling forecast from ARIMA(4,1,0): Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) + ggtitle(paste0("One-step-ahead rolling forecast from ARIMA: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 ```
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
 
 Now, for the LSTM...
 ========================================================
 class:small-code
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -342,12 +350,13 @@ pred_test <- model %>% predict(X_test, batch_size = batch_size)
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 OK! Results please
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
 &nbsp;
 
@@ -368,13 +377,13 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 OOPS...????
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 
 Seems like LSTM does not like extrapolating 
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -409,12 +418,13 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 ARIMA is allowed to work with differences...
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -502,12 +512,14 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 We could try to get further improvement by scaling the data
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
 &nbsp;
 
@@ -602,14 +614,15 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 Quite an improvement! Seems like this one goes to LSTM ;-)
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
 Next up: Multi-step-ahead rolling forecast
 ========================================================
 incremental:true
 class:small-code
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -650,13 +663,16 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(colour = type)) + ggtitl
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
 For LSTM, let's now directly use differenced and scaled data
 ========================================================
 class:small-code
+incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
 &nbsp;
 
@@ -744,6 +760,9 @@ Multi-step forecast from LSTM
 class:small-code
 incremental:true
 
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 &nbsp;
 
 ```{r, results="hide"}
@@ -791,8 +810,6 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 So this one goes to ARIMA. But we haven't really done any hyperparameter tuning for LSTM.
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
 ========================================================
@@ -827,7 +844,10 @@ ggplot(df, aes(x = time_id, y = value, color = train_test)) + geom_line()
 
 The tasks
 ========================================================
-incremental:true
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -839,15 +859,15 @@ As before:
 &nbsp;
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 
 
 ARIMA for seasonal data, one-step-ahead forecast
 ========================================================
 class:small-code
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -875,12 +895,13 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ri
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 Seasonal data, one-step-ahead forecast: Enter: LSTM
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
 &nbsp;
 
@@ -972,15 +993,15 @@ ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + ggtitle
 
 So this one's for LSTM again.
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
-
 
 ARIMA for seasonal data, multi-step-ahead forecast
 ========================================================
 class:small-code
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
 &nbsp;
 
@@ -1021,15 +1042,13 @@ ggtitle(paste0("6-step-ahead rolling forecast from ARIMA: Test RMSE = ", round(m
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
-
-
 
 Seasonal data, multi-step forecast: enter: LSTM
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1151,12 +1170,12 @@ Pretty close!
 
 And again, no hyperparameter tuning involved.
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 Intermediate result after synthetic datasets?
 ========================================================
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1169,9 +1188,6 @@ Time to look at some real data.
 We will now zoom in on one-step-ahead forecasts only, and we will choose two very different datasets: one a classic we are sure ARIMA will handle flawlessly, and one ... well, let's see!
 
 &nbsp;
-
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
 ========================================================
@@ -1189,9 +1205,7 @@ Round 3: AirPassengers
 The "Iris of time series"
 ========================================================
 class:smalltext
-incremental:true
 
-&nbsp;
 
 ```{r}
 data("AirPassengers")
@@ -1200,7 +1214,6 @@ autoplot(AirPassengers) + ggtitle("Air Passengers dataset") +   theme(title = bo
 ```
 
 Things to note:
-
 - we have a trend
 - we have seasonality
 - variance is increasing (heteroscedasticity)
@@ -1226,6 +1239,9 @@ AirPassengers, enter: ARIMA
 ========================================================
 class:small-code
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1260,14 +1276,14 @@ ggtitle(paste0("One-step-ahead rolling forecast from ARIMA: Test RMSE = ", round
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 
 AirPassengers, enter: LSTM
 ========================================================
 class:small-code
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1368,14 +1384,14 @@ ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = "
 ```
 
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-
-Intermediate result, before final round... Drumroll...
+Intermediate result, before final round... Drumroll!
 ========================================================
 class:small-code
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1387,8 +1403,6 @@ For sure it's not - for example, with 128 hidden units instead of 32, we're alre
 
 But let's accept the current standings and look at the final dataset...
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 ========================================================
 type:prompt
@@ -1424,8 +1438,10 @@ ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Air Passeng
 
 Enter: ARIMA
 ========================================================
-class:smalltext
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1445,14 +1461,12 @@ fit
 
 ... hm???
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
-
 ARIMA: 2nd try
 ========================================================
-class:smalltext
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1466,17 +1480,18 @@ fit <- auto.arima(train_ts)
 fit
 ```
 
-&nbsp;
 
 Still not what we wanted.
+
+
+
+ARIMA: 3nd try
+========================================================
+incremental:true
 
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-ARIMA: 3nd try
-========================================================
-class:smalltext
-incremental:true
 
 &nbsp;
 
@@ -1492,18 +1507,19 @@ Perhaps an exhaustive search - over all models up to a specific capacity - will 
 
 Honestly, I did not have the patience to wait for this to finish... but it didn't look good ;-)
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 Anything else we could do?
+
+
 
 
 
 Trying TBATS
 ========================================================
-class:smalltext
 incremental:true
 class:smallcode
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
@@ -1520,15 +1536,21 @@ fit
 &nbsp;
 
 
+Predictions from TBATS 
+========================================================
+incremental:true
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
-Predictions from TBATS 
-========================================================
-class:smalltext
-incremental:true
+&nbsp;
+
+You might ask if our rules even allow letting TBATS help out ARIMA here?
+
+Anyway, let's see the predictions:
 
 &nbsp;
+
 
 ```{r}
 preds_list <- readRDS("preds_list.rds")
@@ -1550,19 +1572,20 @@ ggtitle(paste0("One-step-ahead rolling forecast from TBATS: Test RMSE = ", round
 
 &nbsp;
 
-<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
-<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
-
 
 
 Time to LSTM...!
 ========================================================
-class:smalltext
 incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 &nbsp;
 
+We're gonna choose a sequence length of 7*24, i.e., 168.
 
+And the results?
 
 &nbsp;
 
@@ -1660,6 +1683,57 @@ ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = "
 
 &nbsp;
 
+
+That's about half the RSME of TBATS...
+========================================================
+
+
 <img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+&nbsp;
+
+... after a training time of just 22 epochs!
+
+How's that gonna affect the match?
+
+Hm. How about we just give up that scenario and come to a conclusion?
+
+
+
+Conclusion
+========================================================
+incremental:true
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+&nbsp;
+
+- LSTM works fine for tasks where ARIMA is known to work well, even
+    - given very little data
+    - without much hyperparameter tuning
+    - without having more than one level of LSTM
+    - for multi-step forecasts
+    
+
+- LSTM works great for multiple seasonality, again, without any tuning!
+
+- Benchmark-like approach ("shootout") helps understand models/algorithms better (e.g.: would GRU work as well on multiple seasonality time series as LSTM? Why?)
+
+
+
+
+Questions?
+========================================================
+
+
+&nbsp;
+
+Thanks for your attention!
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
 
