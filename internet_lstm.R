@@ -2,6 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
+source("common.R")
 source("functions.R")
 
 traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
@@ -10,7 +11,7 @@ ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Internet tr
 internet_train <- traffic_df$bits[1:800]
 internet_test <- traffic_df$bits[801:nrow(traffic_df)]
 
-model_exists <- FALSE
+model_exists <- TRUE
 
 lstm_num_timesteps <- 7*24
 batch_size <- 1
@@ -66,7 +67,9 @@ if (!model_exists) {
   model %>% summary()
   
   model %>% fit( 
-    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+    X_train, y_train, batch_size = batch_size, epochs = epochs,
+    validation_data = list(X_test, y_test),
+    callbacks = callback_early_stopping(patience=2)
   )
   model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
 } else {
@@ -82,8 +85,10 @@ pred_test <- denormalize(pred_test, minval, maxval)
 pred_train_undiff <- pred_train + internet_train[(lstm_num_timesteps+1):(length(internet_train)-1)]
 pred_test_undiff <- pred_test + internet_test[(lstm_num_timesteps+1):(length(internet_test)-1)]
 
+test_rmse <- rmse(tail(internet_test,length(internet_test) - lstm_num_timesteps - 1), pred_test_undiff)
+
 df <- data_frame(
-                 time_id = 1:144,
+                 time_id = 1:1231,
                  train = c(internet_train, rep(NA, length(internet_test))),
                  test = c(rep(NA, length(internet_train)), internet_test),
                  pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(internet_test))),
@@ -92,4 +97,4 @@ df <- data_frame(
 df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
 ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))
 
-(test_rmse <- rmse(tail(test,length(internet_test) - lstm_num_timesteps - 1), pred_test_undiff))
+

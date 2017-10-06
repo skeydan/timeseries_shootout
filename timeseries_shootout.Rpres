@@ -1297,10 +1297,6 @@ test_type <- "AIRP"
 
 model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
 
-cat("\n####################################################################################")
-cat("\nRunning model: ", model_name)
-cat("\n####################################################################################")
-
 train_diff <- diff(airp_train)[!is.na(diff(airp_train))]
 test_diff <- diff(airp_test)[!is.na(diff(airp_test))]
 
@@ -1405,14 +1401,16 @@ type:prompt
 Round 4: Internet traffic data
 </h1>
 
-Intermediate result, before final round... Drumroll...
+
+The data
 ========================================================
+class:smalltext
 
 &nbsp;
 
 As per the description... 
 
-"Internet traffic data (in bits) from a private ISP with centres in 11 European cities. The data corresponds to a transatlantic link and was collecteInternet traffic data (in bits) from a private ISP with centres in 11 European cities. The data corresponds to a transatlantic link and was collected from 06:57 hours on 7 June to 11:17 hours on 31 July 2005. Hourly data."d from 06:57 hours on 7 June to 11:17 hours on 31 July 2005. Hourly data."
+"_Internet traffic data (in bits) from a private ISP with centres in 11 European cities. The data corresponds to a transatlantic link and was collected from 06:57 hours on 7 June to 11:17 hours on 31 July 2005. Hourly data._"
 
 ```{r,fig.width=20,fig.height=10}
 traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
@@ -1424,4 +1422,244 @@ ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Air Passeng
 <img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
 
+Enter: ARIMA
+========================================================
+class:smalltext
+incremental:true
+
+&nbsp;
+
+Let's do it the auto.arima way as usual...
+
+&nbsp;
+
+```{r, echo=TRUE}
+train <- traffic_df$bits[1:800]
+test <- traffic_df$bits[801:nrow(traffic_df)]
+
+fit <- auto.arima(train)
+fit
+```
+
+&nbsp;
+
+... hm???
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+ARIMA: 2nd try
+========================================================
+class:smalltext
+incremental:true
+
+&nbsp;
+
+Let's give ARIMA some information...
+
+&nbsp;
+
+```{r, echo=TRUE}
+train_ts <- msts(train,seasonal.periods = c(24, 24*7))
+fit <- auto.arima(train_ts)
+fit
+```
+
+&nbsp;
+
+Still not what we wanted.
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+ARIMA: 3nd try
+========================================================
+class:smalltext
+incremental:true
+
+&nbsp;
+
+Perhaps an exhaustive search - over all models up to a specific capacity - will make things better?
+
+&nbsp;
+
+```{r, echo=TRUE}
+#fit <- auto.arima(train_ts, stepwise = FALSE)
+```
+
+&nbsp;
+
+Honestly, I did not have the patience to wait for this to finish... but it didn't look good ;-)
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Anything else we could do?
+
+
+
+Trying TBATS
+========================================================
+class:smalltext
+incremental:true
+class:smallcode
+
+&nbsp;
+
+TBATS (_Exponential smoothing state space model with Box-Cox transformation, ARMA errors, Trend and Seasonal components_) is a method designed to cope with complex seasonal patterns. 
+
+
+&nbsp;
+
+```{r, echo=TRUE}
+fit <- tbats(train_ts)
+fit
+```
+
+&nbsp;
+
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+Predictions from TBATS 
+========================================================
+class:smalltext
+incremental:true
+
+&nbsp;
+
+```{r}
+preds_list <- readRDS("preds_list.rds")
+test_rmse <- rmse(test, preds_list$predictions)
+
+df <- data_frame(
+                time_id = 1:1231,
+                 train_ = c(train, rep(NA, length(test))),
+                 test_ = c(rep(NA, length(train)), test),
+                 fitted = c(fit$fitted, rep(NA, length(test))),
+                 preds = c(rep(NA, length(train)), preds_list$predictions),
+                 lower = c(rep(NA, length(train)), preds_list$lower),
+                 upper = c(rep(NA, length(train)), preds_list$upper))
+df <- df %>% gather(key = 'type', value = 'value', train_:preds)
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type)) + geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.1) +
+ggtitle(paste0("One-step-ahead rolling forecast from TBATS: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+```
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
+
+
+
+Time to LSTM...!
+========================================================
+class:smalltext
+incremental:true
+
+&nbsp;
+
+
+
+&nbsp;
+
+```{r, results="hide"}
+traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
+
+internet_train <- traffic_df$bits[1:800]
+internet_test <- traffic_df$bits[801:nrow(traffic_df)]
+
+model_exists <- TRUE
+
+lstm_num_timesteps <- 7*24
+batch_size <- 1
+epochs <- 500
+lstm_units <- 32
+model_type <- "model_lstm_simple"
+lstm_type <- "stateless"
+data_type <- "data_diffed_scaled"
+test_type <- "INTERNET"
+
+model_name <- build_model_name(model_type, test_type, lstm_type, data_type, epochs)
+
+train_diff <- diff(internet_train)[!is.na(diff(internet_train))]
+test_diff <- diff(internet_test)[!is.na(diff(internet_test))]
+
+# normalize
+minval <- min(train_diff)
+maxval <- max(train_diff)
+
+train_diff <- normalize(train_diff, minval, maxval)
+test_diff <- normalize(test_diff, minval, maxval)
+
+X_train <- build_X(train_diff, lstm_num_timesteps) 
+y_train <- build_y(train_diff, lstm_num_timesteps) 
+
+X_test <- build_X(test_diff, lstm_num_timesteps) 
+y_test <- build_y(test_diff, lstm_num_timesteps) 
+
+# Keras LSTMs expect the input array to be shaped as (no. samples, no. time steps, no. features)
+X_train <- reshape_X_3d(X_train)
+X_test <- reshape_X_3d(X_test)
+
+num_samples <- dim(X_train)[1]
+num_steps <- dim(X_train)[2]
+num_features <- dim(X_train)[3]
+
+# model
+if (!model_exists) {
+  set.seed(22222)
+  model <- keras_model_sequential() 
+  model %>% 
+    layer_lstm(units = lstm_units, input_shape = c(num_steps, num_features)) %>% 
+    layer_dense(units = 1) %>% 
+    compile(
+      loss = 'mean_squared_error',
+      optimizer = 'adam',
+      callbacks = callback_early_stopping(patience=2)
+    )
+  
+  model %>% summary()
+  
+  model %>% fit( 
+    X_train, y_train, batch_size = batch_size, epochs = epochs, validation_data = list(X_test, y_test)
+  )
+  model %>% save_model_hdf5(filepath = paste0(model_name, ".h5"))
+} else {
+  model <- load_model_hdf5(filepath = paste0(model_name, ".h5"))
+}
+
+pred_train <- model %>% predict(X_train, batch_size = 1)
+pred_test <- model %>% predict(X_test, batch_size = 1)
+
+pred_train <- denormalize(pred_train, minval, maxval)
+pred_test <- denormalize(pred_test, minval, maxval)
+
+pred_train_undiff <- pred_train + internet_train[(lstm_num_timesteps+1):(length(internet_train)-1)]
+pred_test_undiff <- pred_test + internet_test[(lstm_num_timesteps+1):(length(internet_test)-1)]
+
+test_rmse <- rmse(tail(internet_test,length(internet_test) - lstm_num_timesteps - 1), pred_test_undiff)
+
+df <- data_frame(
+                 time_id = 1:1231,
+                 train = c(internet_train, rep(NA, length(internet_test))),
+                 test = c(rep(NA, length(internet_train)), internet_test),
+                 pred_train = c(rep(NA, lstm_num_timesteps+1), pred_train_undiff, rep(NA, length(internet_test))),
+                 pred_test = c(rep(NA, length(internet_train)), rep(NA, lstm_num_timesteps+1), pred_test_undiff)
+   )
+df <- df %>% gather(key = 'type', value = 'value', train:pred_test)
+
+ggplot(df, aes(x = time_id, y = value)) + geom_line(aes(color = type))  +
+ggtitle(paste0("One-step-ahead rolling forecast from 32-unit LSTM: Test RMSE = ", round(test_rmse, 2))) +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+
+
+```
+
+&nbsp;
+
+<img src="tri_logo_high.jpg" style="position:absolute;top:0px;right:0px; width: 10%" />
+<img src='cube3.png' border=0 style="position:absolute;top:90%;right:0px; width: 8%" />
 
