@@ -1428,7 +1428,7 @@ As per the description...
 
 ```{r,fig.width=20,fig.height=10}
 traffic_df <- read_csv("internet-traffic-data-in-bits-fr.csv", col_names = c("hour", "bits"), skip = 1)
-ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Air Passengers dataset") +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
+ggplot(traffic_df, aes(x = hour, y = bits)) + geom_line() + ggtitle("Internet traffic in bits") +   theme(title = bold_text_20, axis.title = bold_text_20, axis.text = bold_text_20)
 
 ```
 
